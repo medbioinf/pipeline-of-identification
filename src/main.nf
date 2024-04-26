@@ -12,8 +12,8 @@ include {comet_identification} from workflow.projectDir + '/identification/comet
 
 workflow {
     thermo_raw_files = Channel.fromPath(params.raws + '/*.raw')
-    sdrf = Channel.fromPath(params.sdrf)
-    fasta = Channel.fromPath(params.fasta)
+    sdrf = Channel.fromPath(params.sdrf).first()
+    fasta = Channel.fromPath(params.fasta).first()
     // Convert raw files to mzML
     mzmls = raw_file_conversion(thermo_raw_files)
 
