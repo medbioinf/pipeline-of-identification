@@ -1,14 +1,16 @@
-FROM --platform=amd64 ubuntu:22.04
-
-ARG COMET_VERSION=v2022.01.2
+FROM --platform=amd64 ubuntu:24.04
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV COMET_VERSION=${COMET_VERSION}
 
+RUN apt-get update -y \
+    && apt-get install -y curl \
+    && apt-get clean
+
 COPY docker/comet/entrypoint.sh /usr/local/bin
 
-RUN apt-get update -y \
-    && apt-get install -y --no-upgrade curl
+# install comet
+ARG COMET_VERSION=v2023.01.2
 
 RUN curl -L -o /usr/local/bin/comet https://github.com/UWPR/Comet/releases/download/${COMET_VERSION}/comet.linux.exe \
     && chmod +x /usr/local/bin/comet
