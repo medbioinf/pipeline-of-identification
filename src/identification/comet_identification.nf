@@ -55,14 +55,17 @@ process identification_with_comet {
 /**
  * Exports the identification using Comet configured by a SDRF files
  */
-workflow convert_raw_files_to_mzml {
+workflow comet_identification {
     take:
+        sdrf
+        fasta
         mzml
+        
 
     main:
         default_comet_params_file = create_default_comet_params_file()
         comet_param_files = create_comet_params_file_from_sdrf(sdrf)
-        mzidentmls = identification_with_comet(thermo_raw_files)
+        mzidentmls = identification_with_comet(comet_param_file, fasta, mzml)
     emit:
         mzidentmls
 }

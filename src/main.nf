@@ -8,14 +8,17 @@ params.out = 'output directory'
 
 
 include {raw_file_conversion} from workflow.projectDir + '/conversion/raw_file_conversion.nf'
-include {convert_raw_files_to_mzml} from workflow.projectDir + '/identification/comet_identification.nf'
+include {comet_identification} from workflow.projectDir + '/identification/comet_identification.nf'
 
 workflow {
     thermo_raw_files = Channel.fromPath(params.raws + '/*.raw')
+    sdrf = Channel.fromPath(params.sdrf)
+    fasta = Channel.fromPath(params.fasta)
     // Convert raw files to mzML
-    raw_file_conversion(thermo_raw_files)
+    mzmls = raw_file_conversion(thermo_raw_files)
 
     // Identification
+    mzidents = comet_identification(sdrf, fasta, mzmls)
 
     // Preprocessing
 
