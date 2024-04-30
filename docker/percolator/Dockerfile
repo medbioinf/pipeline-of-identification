@@ -7,7 +7,7 @@ RUN apt-get update -y \
     && apt-get install -y curl \
     && apt-get clean
 
-COPY docker/comet/entrypoint.sh /usr/local/bin
+COPY docker/entrypoint.sh /usr/local/bin
 
 # install Percolator
 ARG PERCOLATOR_REL_VERSION=rel-3-06-05

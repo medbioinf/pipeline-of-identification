@@ -7,7 +7,7 @@ RUN apt-get update -y \
     && apt-get install -y curl \
     && apt-get clean
 
-COPY docker/comet/entrypoint.sh /usr/local/bin
+COPY docker/entrypoint.sh /usr/local/bin
 
 # install comet
 ARG COMET_VERSION=v2023.01.2
