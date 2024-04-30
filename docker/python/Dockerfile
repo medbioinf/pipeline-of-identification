@@ -1,5 +1,5 @@
 # AMD64 needed explicitly on ARM as some sofwtare is only available in AMD64
-FROM --platform=amd64 mambaorg/micromamba:1.5.1-jammy
+FROM --platform=amd64 mambaorg/micromamba:1.5.8-noble
 
 WORKDIR /home/mambauser
 # Copy backend and environment.yml
