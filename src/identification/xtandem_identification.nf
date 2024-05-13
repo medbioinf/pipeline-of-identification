@@ -72,12 +72,11 @@ workflow xtandem_identification {
 
     main:
         (xtandem_param_files, taxonomy_file) = create_xtandem_params_files_from_sdrf(sdrf, fasta, max_missed_cleavages, max_parent_charge)
-        
         xtandem_param_files = xtandem_param_files.flatten()
-        tandem_xmls = identification_with_xtandem(xtandem_param_files, taxonomy_file, fasta, mzmls.collect())
 
+        tandem_xmls = identification_with_xtandem(xtandem_param_files, taxonomy_file, fasta, mzmls.collect())
         tandem_xmls = tandem_xmls.flatten()
     
-    /*emit:
-        xtandem_param_files.out[1]*/
+    emit:
+        tandem_xmls
 }
