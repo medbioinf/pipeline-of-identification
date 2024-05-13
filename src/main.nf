@@ -11,9 +11,12 @@ params.out = 'output directory'
 params.max_missed_cleavages = 2
 params.max_parent_charge = 4
 
+/** TODO: set the num_threads someway useful */
+
+// including modules
 include {raw_file_conversion} from workflow.projectDir + '/conversion/raw_file_conversion.nf'
-include {comet_identification} from workflow.projectDir + '/identification/comet_identification.nf'
 include {xtandem_identification} from workflow.projectDir + '/identification/xtandem_identification.nf'
+include {comet_identification} from workflow.projectDir + '/identification/comet_identification.nf'
 
 workflow {
     //thermo_raw_files = Channel.fromPath(params.raws + '/*.raw')
@@ -25,9 +28,11 @@ workflow {
     //mzmls = raw_file_conversion(thermo_raw_files)
 
     // Identification
-    //mzidents = comet_identification(sdrf, fasta, params.max_variable_mods)
-    xtandem_identification(sdrf, fasta, mzmls, params.max_missed_cleavages, params.max_parent_charge)
-
+    xtandem_xmls = xtandem_identification(sdrf, fasta, mzmls, params.max_missed_cleavages, params.max_parent_charge)
+    comet_tsvs = comet_identification(sdrf, fasta, mzmls)
+    
+    xtandem_xmls.view { "tandem: $it" }
+    comet_tsvs.view { "comet: $it" }
     // Postprocessing
 
     // Analysis of the data
