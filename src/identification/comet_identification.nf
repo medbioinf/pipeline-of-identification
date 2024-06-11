@@ -1,11 +1,13 @@
 nextflow.enable.dsl=2
 
+comet_image = 'quay.io/medbioinf/comet-ms'
+python_image = 'medbioinf/ident-comparison-python'
 
 /**
  * Creates a default comet params file
  */
 process create_default_comet_param_file {
-    container 'medbioinf/ident-comparison-comet:latest'
+    container { comet_image }
 
     output:
     path "comet.params.new"
@@ -22,7 +24,7 @@ process create_default_comet_param_file {
  * @return The comet params file
  */
 process create_comet_param_files_from_sdrf {
-    container 'medbioinf/ident-comparison-python:latest'
+    container { python_image }
 
     input:
     path sdrf
@@ -37,8 +39,8 @@ process create_comet_param_files_from_sdrf {
 }
 
 process identification_with_comet {
-    maxForks 1
-    container 'medbioinf/ident-comparison-comet:latest'
+    maxForks 2
+    container { comet_image }
 
     input:
     val mzmls_and_comet_param_files
@@ -47,7 +49,7 @@ process identification_with_comet {
     path comet_param_files
 
     output:
-    path "*.txt"
+    path "*.mzid"
 
     /** TODO: set the num_threads someway useful */
     """
@@ -56,9 +58,9 @@ process identification_with_comet {
     sed -i "s;^output_sqtfile.*;output_sqtfile = 0;" ${mzmls_and_comet_param_files[1]}
     sed -i "s;^output_txtfile.*;output_txtfile = 1;" ${mzmls_and_comet_param_files[1]}
     sed -i "s;^output_pepxmlfile.*;output_pepxmlfile = 0;" ${mzmls_and_comet_param_files[1]}
-    sed -i "s;^output_mzidentmlfile.*;output_mzidentmlfile = 0;" ${mzmls_and_comet_param_files[1]}
+    sed -i "s;^output_mzidentmlfile.*;output_mzidentmlfile = 1;" ${mzmls_and_comet_param_files[1]}
     sed -i "s;^output_percolatorfile.*;output_percolatorfile = 0;" ${mzmls_and_comet_param_files[1]}
-    sed -i "s;^print_expect_score.*;print_expect_score = 1;" ${mzmls_and_comet_param_files[1]}
+    sed -i "s;^print_expect_score.*;print_expect_score = 0;" ${mzmls_and_comet_param_files[1]}
     sed -i "s;^num_output_lines.*;num_output_lines = 5;" ${mzmls_and_comet_param_files[1]}
     
     comet -P${mzmls_and_comet_param_files[1]} -D${fasta} ${mzmls_and_comet_param_files[0]}
@@ -83,9 +85,9 @@ workflow comet_identification {
         // create a map containing the mzML file and the corresponding comet_param_file
         mzml_and_param_file = comet_param_files.map { it -> [ it.name.take(it.name.lastIndexOf('.comet.params')), it.name ] }
 
-        comet_tsvs = identification_with_comet(mzml_and_param_file, fasta, mzmls.collect(), comet_param_files.collect())
-        comet_tsvs = comet_tsvs.flatten()
+        comet_mzids = identification_with_comet(mzml_and_param_file, fasta, mzmls.collect(), comet_param_files.collect())
+        comet_mzids = comet_mzids.flatten()
         
     emit:
-        comet_tsvs
+        comet_mzids
 }

@@ -2,7 +2,7 @@ nextflow.enable.dsl=2
 
 // parameters set by the command line
 //params.raws = 'directory with raw files'
-params.mzmls_path = 'directory with mzML files'
+params.mzml_files = '*.mzML'     // my contain globs
 params.fasta = 'fasta file'
 params.sdrf = 'sdrf file'
 params.out = 'output directory'
@@ -20,7 +20,7 @@ include {comet_identification} from workflow.projectDir + '/identification/comet
 
 workflow {
     //thermo_raw_files = Channel.fromPath(params.raws + '/*.raw')
-    mzmls = Channel.fromPath(params.mzmls_path + '/*.mzML')
+    mzmls = Channel.fromPath(params.mzml_files)
     sdrf = Channel.fromPath(params.sdrf).first()
     fasta = Channel.fromPath(params.fasta).first()
 
@@ -29,10 +29,8 @@ workflow {
 
     // Identification
     xtandem_xmls = xtandem_identification(sdrf, fasta, mzmls, params.max_missed_cleavages, params.max_parent_charge)
-    comet_tsvs = comet_identification(sdrf, fasta, mzmls)
+    comet_mzids = comet_identification(sdrf, fasta, mzmls)
     
-    xtandem_xmls.view { "tandem: $it" }
-    comet_tsvs.view { "comet: $it" }
     // Postprocessing
 
     // Analysis of the data

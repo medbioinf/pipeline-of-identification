@@ -1,5 +1,8 @@
 nextflow.enable.dsl=2
 
+xtandem_image = 'quay.io/medbioinf/xtandem'
+python_image = 'medbioinf/ident-comparison-python'
+
 /**
  * Creates a X!TAndem params XML file for each RAW file ionthe SDRF file, together with one taxonomy XML file
  * @param sdrf The SDRF file
@@ -10,7 +13,7 @@ nextflow.enable.dsl=2
  * @return The XTandem params for each file in the SDRF and the according taxonomy file
  */
 process create_xtandem_params_files_from_sdrf {
-    container 'medbioinf/ident-comparison-python:latest'
+    container { python_image }
 
     input:
     path sdrf
@@ -42,7 +45,7 @@ process create_xtandem_params_files_from_sdrf {
  */
 process identification_with_xtandem {
     maxForks 1
-    container 'medbioinf/ident-comparison-xtandem:latest'
+    container { xtandem_image }
 
     input:
     path xtandem_param_file
