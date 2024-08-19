@@ -3,6 +3,35 @@ nextflow.enable.dsl=2
 comet_image = 'quay.io/medbioinf/comet-ms:v2024.01.0'
 python_image = 'medbioinf/ident-comparison-python'
 
+// number of threads used by comet
+params.comet_threads = 16
+
+
+/**
+ * Exports the identification using Comet configured by a SDRF files
+ */
+workflow comet_identification {
+    take:
+        sdrf
+        fasta
+        mzmls
+
+    main:
+        default_comet_params_file = create_default_comet_param_file()
+
+        comet_param_files = create_comet_param_files_from_sdrf(sdrf, default_comet_params_file)
+        comet_param_files = comet_param_files.flatten()
+        
+        // create a map containing the mzML file and the corresponding comet_param_file
+        mzml_and_param_file = comet_param_files.map { it -> [ it.name.take(it.name.lastIndexOf('.comet.params')), it.name ] }
+
+        comet_mzids = identification_with_comet(mzml_and_param_file, fasta, mzmls.collect(), comet_param_files.collect())
+        comet_mzids = comet_mzids.flatten()
+        
+    emit:
+        comet_mzids
+}
+
 /**
  * Creates a default comet params file
  */
@@ -39,7 +68,7 @@ process create_comet_param_files_from_sdrf {
 }
 
 process identification_with_comet {
-    maxForks 2
+    cpus { params.comet_threads }
     container { comet_image }
 
     input:
@@ -51,9 +80,8 @@ process identification_with_comet {
     output:
     path "*.mzid"
 
-    /** TODO: set the num_threads someway useful */
     """
-    sed -i "s;^num_threads.*;num_threads = 16;" ${mzmls_and_comet_param_files[1]}
+    sed -i "s;^num_threads.*;num_threads = ${params.comet_threads};" ${mzmls_and_comet_param_files[1]}
 
     sed -i "s;^output_sqtfile.*;output_sqtfile = 0;" ${mzmls_and_comet_param_files[1]}
     sed -i "s;^output_txtfile.*;output_txtfile = 0;" ${mzmls_and_comet_param_files[1]}
@@ -65,29 +93,4 @@ process identification_with_comet {
     
     comet -P${mzmls_and_comet_param_files[1]} -D${fasta} ${mzmls_and_comet_param_files[0]}
     """
-}
-
-/**
- * Exports the identification using Comet configured by a SDRF files
- */
-workflow comet_identification {
-    take:
-        sdrf
-        fasta
-        mzmls
-
-    main:
-        default_comet_params_file = create_default_comet_param_file()
-
-        comet_param_files = create_comet_param_files_from_sdrf(sdrf, default_comet_params_file)
-        comet_param_files = comet_param_files.flatten()
-        
-        // create a map containing the mzML file and the corresponding comet_param_file
-        mzml_and_param_file = comet_param_files.map { it -> [ it.name.take(it.name.lastIndexOf('.comet.params')), it.name ] }
-
-        comet_mzids = identification_with_comet(mzml_and_param_file, fasta, mzmls.collect(), comet_param_files.collect())
-        comet_mzids = comet_mzids.flatten()
-        
-    emit:
-        comet_mzids
 }

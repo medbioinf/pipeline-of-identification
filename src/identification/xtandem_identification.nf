@@ -3,63 +3,8 @@ nextflow.enable.dsl=2
 xtandem_image = 'quay.io/medbioinf/xtandem:2017.2.1.4'
 python_image = 'medbioinf/ident-comparison-python'
 
-/**
- * Creates a X!TAndem params XML file for each RAW file ionthe SDRF file, together with one taxonomy XML file
- * @param sdrf The SDRF file
- * @param sdrf The FASTA file
- * @param max_missed_clavages maximum number of missed cleavages
- * @param max_parent_charge  maximum parent charge
-
- * @return The XTandem params for each file in the SDRF and the according taxonomy file
- */
-process create_xtandem_params_files_from_sdrf {
-    container { python_image }
-
-    input:
-    path sdrf
-    path fasta
-    val max_missed_clavages
-    val max_parent_charge
-
-    output:
-    path "*.tandem_input.xml"
-    path "sdrf_convert_taxonomy.xml"
-
-    /** TODO: set the max_threads someway useful */
-    """
-    python -m sdrf_convert $sdrf tandem --fasta $fasta --max-missed-cleavages $max_missed_clavages --max-parent-charge $max_parent_charge --max-threads 16
-    
-    # rename absolute paths to current path, to allow for clean passing on in workflow
-    workDir=\$(pwd)
-    for file in *.tandem_input.xml; do
-        sed -i "s;\$workDir/;;g" \$file
-    done
-
-    #sed -i "s;\$workDir/;;g" sdrf_convert_taxonomy.xml
-    """
-}
-
-
-/**
- * Performs the identifications with XTandem
- */
-process identification_with_xtandem {
-    maxForks 1
-    container { xtandem_image }
-
-    input:
-    path xtandem_param_file
-    path taxonomy_file
-    path fasta
-    path mzmls
-
-    output:
-    path "*.t.xml"
-
-    """
-    tandem $xtandem_param_file
-    """
-}
+// number of threads used by xtandem
+params.xtandem_threads = 16
 
 
 /**
@@ -82,4 +27,62 @@ workflow xtandem_identification {
     
     emit:
         tandem_xmls
+}
+
+
+/**
+ * Creates a X!TAndem params XML file for each RAW file ionthe SDRF file, together with one taxonomy XML file
+ * @param sdrf The SDRF file
+ * @param sdrf The FASTA file
+ * @param max_missed_clavages maximum number of missed cleavages
+ * @param max_parent_charge  maximum parent charge
+
+ * @return The XTandem params for each file in the SDRF and the according taxonomy file
+ */
+process create_xtandem_params_files_from_sdrf {
+    container { python_image }
+
+    input:
+    path sdrf
+    path fasta
+    val max_missed_clavages
+    val max_parent_charge
+
+    output:
+    path "*.tandem_input.xml"
+    path "sdrf_convert_taxonomy.xml"
+
+    """
+    python -m sdrf_convert $sdrf tandem --fasta $fasta --max-missed-cleavages $max_missed_clavages --max-parent-charge $max_parent_charge --max-threads $params.xtandem_threads
+    
+    # rename absolute paths to current path, to allow for clean passing on in workflow
+    workDir=\$(pwd)
+    for file in *.tandem_input.xml; do
+        sed -i "s;\$workDir/;;g" \$file
+    done
+
+    #sed -i "s;\$workDir/;;g" sdrf_convert_taxonomy.xml
+    """
+}
+
+
+/**
+ * Performs the identifications with XTandem
+ */
+process identification_with_xtandem {
+    cpus { params.xtandem_threads }
+    container { xtandem_image }
+
+    input:
+    path xtandem_param_file
+    path taxonomy_file
+    path fasta
+    path mzmls
+
+    output:
+    path "*.t.xml"
+
+    """
+    tandem $xtandem_param_file
+    """
 }
