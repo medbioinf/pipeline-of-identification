@@ -1,6 +1,6 @@
 nextflow.enable.dsl=2
 
-xtandem_image = 'quay.io/medbioinf/xtandem'
+xtandem_image = 'quay.io/medbioinf/xtandem:2017.2.1.4'
 python_image = 'medbioinf/ident-comparison-python'
 
 /**

@@ -1,6 +1,6 @@
 nextflow.enable.dsl=2
 
-comet_image = 'quay.io/medbioinf/comet-ms'
+comet_image = 'quay.io/medbioinf/comet-ms:v2024.01.0'
 python_image = 'medbioinf/ident-comparison-python'
 
 /**
@@ -56,11 +56,11 @@ process identification_with_comet {
     sed -i "s;^num_threads.*;num_threads = 16;" ${mzmls_and_comet_param_files[1]}
 
     sed -i "s;^output_sqtfile.*;output_sqtfile = 0;" ${mzmls_and_comet_param_files[1]}
-    sed -i "s;^output_txtfile.*;output_txtfile = 1;" ${mzmls_and_comet_param_files[1]}
+    sed -i "s;^output_txtfile.*;output_txtfile = 0;" ${mzmls_and_comet_param_files[1]}
     sed -i "s;^output_pepxmlfile.*;output_pepxmlfile = 0;" ${mzmls_and_comet_param_files[1]}
     sed -i "s;^output_mzidentmlfile.*;output_mzidentmlfile = 1;" ${mzmls_and_comet_param_files[1]}
     sed -i "s;^output_percolatorfile.*;output_percolatorfile = 0;" ${mzmls_and_comet_param_files[1]}
-    sed -i "s;^print_expect_score.*;print_expect_score = 0;" ${mzmls_and_comet_param_files[1]}
+    
     sed -i "s;^num_output_lines.*;num_output_lines = 5;" ${mzmls_and_comet_param_files[1]}
     
     comet -P${mzmls_and_comet_param_files[1]} -D${fasta} ${mzmls_and_comet_param_files[0]}
