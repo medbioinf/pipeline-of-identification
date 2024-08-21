@@ -23,7 +23,7 @@ workflow msamanda_identification {
 
         // transpose to tuples containing [pin, tsv] files for each mzML 
         return_files = msamanda_results.msamanda_pin.collect()
-            .concat(separated_results.msamanda_tsv.collect())
+            .concat(msamanda_results.msamanda_mzid.collect())
             .toList()
             .transpose()
         
