@@ -7,6 +7,7 @@ include {xtandem_identification} from workflow.projectDir + '/src/identification
 include {comet_identification} from workflow.projectDir + '/src/identification/comet_identification.nf'
 include {sage_identification} from workflow.projectDir + '/src/identification/sage_identification.nf'
 include {msamanda_identification} from workflow.projectDir + '/src/identification/msamanda_identification.nf'
+include {msgfplus_identification} from workflow.projectDir + '/src/identification/msgfplus_identification.nf'
 
 include {pia_tda_analysis} from workflow.projectDir + '/src/postprocessing/pia_tda.nf'
 
@@ -27,6 +28,7 @@ params.max_parent_charge = 4
 // TODO: create these with sdrf-convert
 params.sage_config_file = "${baseDir}/config/sage_config.json"
 params.msamanda_config_file = "${baseDir}/config/msamanda_settings.xml"
+params.msgfplus_params_file = "${baseDir}/config/MSGFPlus_Params.txt"
 
 workflow {
     //thermo_raw_files = Channel.fromPath(params.raws + '/*.raw')
@@ -37,6 +39,7 @@ workflow {
     // TODO: this should go into sdrf-convert
     sage_config_file = Channel.fromPath(params.sage_config_file).first()
     msamanda_config_file = Channel.fromPath(params.msamanda_config_file).first()
+    msgfplus_params_file = Channel.fromPath(params.msgfplus_params_file).first()
 
     // Convert raw files to mzML
     //mzmls = raw_file_conversion(thermo_raw_files)
@@ -46,8 +49,7 @@ workflow {
     comet_mzids = comet_identification(sdrf, fasta, mzmls)
     sage_results = sage_identification(sage_config_file, fasta, mzmls)
     msamanda_results = msamanda_identification(msamanda_config_file, fasta, mzmls)
-
-    msamanda_results.view()
+    msgfplus_results = msgfplus_identification(msgfplus_params_file, fasta, mzmls)
     
     // Postprocessing
 
