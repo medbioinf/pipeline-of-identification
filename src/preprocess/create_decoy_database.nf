@@ -33,9 +33,9 @@ process call_decoy_database {
     val decoy_method
 
     output:
-    path "${fasta.baseName}-reversed_decoys.fasta"
+    path "${fasta.baseName}-rev_decoy.fasta"
 
     """
-    DecoyDatabase -debug 100 -in ${fasta} -out ${fasta.baseName}-reversed_decoys.fasta -decoy_string 'DECOY_' -method ${decoy_method} -threads ${params.decoy_database_threads}
+    DecoyDatabase -in ${fasta} -out ${fasta.baseName}-rev_decoy.fasta -decoy_string 'DECOY_' -method ${decoy_method} -threads ${params.decoy_database_threads}
     """
 }
