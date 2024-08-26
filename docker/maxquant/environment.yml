@@ -1,0 +1,7 @@
+name: maxquant
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - conda-forge::dotnet=8.0.302

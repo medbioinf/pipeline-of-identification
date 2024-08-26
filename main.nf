@@ -8,12 +8,14 @@ include {comet_identification} from workflow.projectDir + '/src/identification/c
 include {sage_identification} from workflow.projectDir + '/src/identification/sage_identification.nf'
 include {msamanda_identification} from workflow.projectDir + '/src/identification/msamanda_identification.nf'
 include {msgfplus_identification} from workflow.projectDir + '/src/identification/msgfplus_identification.nf'
+include {maxquant_identification} from workflow.projectDir + '/src/identification/maxquant_identification.nf'
 
 include {pia_tda_analysis} from workflow.projectDir + '/src/postprocessing/pia_tda.nf'
 
 
 // parameters set by the command line
 //params.raws = 'directory with raw files'
+//params.raw_files = '*.raw'
 params.mzml_files = '*.mzML'     // my contain globs
 params.fasta = 'fasta file'
 params.sdrf = 'sdrf file'
@@ -29,9 +31,10 @@ params.max_parent_charge = 4
 params.sage_config_file = "${baseDir}/config/sage_config.json"
 params.msamanda_config_file = "${baseDir}/config/msamanda_settings.xml"
 params.msgfplus_params_file = "${baseDir}/config/MSGFPlus_Params.txt"
+params.maxquant_params_file = "${baseDir}/config/mqpar.xml"
 
 workflow {
-    //thermo_raw_files = Channel.fromPath(params.raws + '/*.raw')
+    //thermo_raw_files = Channel.fromPath(params.raw_files).flatten()
     mzmls = Channel.fromPath(params.mzml_files).flatten()
     sdrf = Channel.fromPath(params.sdrf).first()
     fasta = Channel.fromPath(params.fasta).first()
@@ -40,6 +43,7 @@ workflow {
     sage_config_file = Channel.fromPath(params.sage_config_file).first()
     msamanda_config_file = Channel.fromPath(params.msamanda_config_file).first()
     msgfplus_params_file = Channel.fromPath(params.msgfplus_params_file).first()
+    maxquant_params_file = Channel.fromPath(params.maxquant_params_file).first()
 
     // Convert raw files to mzML
     //mzmls = raw_file_conversion(thermo_raw_files)
@@ -50,6 +54,7 @@ workflow {
     sage_results = sage_identification(sage_config_file, fasta, mzmls)
     msamanda_results = msamanda_identification(msamanda_config_file, fasta, mzmls)
     msgfplus_results = msgfplus_identification(msgfplus_params_file, fasta, mzmls)
+    maxquant_results = maxquant_identification(maxquant_params_file, fasta, mzmls)
     
     // Postprocessing
 
