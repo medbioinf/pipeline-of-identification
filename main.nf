@@ -1,7 +1,8 @@
 nextflow.enable.dsl=2
 
 // including modules
-include {raw_file_conversion} from workflow.projectDir + '/src/conversion/raw_file_conversion.nf'
+include {raw_file_conversion} from workflow.projectDir + '/src/preprocess/raw_file_conversion.nf'
+include {create_decoy_database} from workflow.projectDir + '/src/preprocess/create_decoy_database.nf'
 
 include {xtandem_identification} from workflow.projectDir + '/src/identification/xtandem_identification.nf'
 include {comet_identification} from workflow.projectDir + '/src/identification/comet_identification.nf'
@@ -15,9 +16,8 @@ include {pia_tda_analysis} from workflow.projectDir + '/src/postprocessing/pia_t
 
 // parameters set by the command line
 //params.raws = 'directory with raw files'
-//params.raw_files = '*.raw'
 params.mzml_files = '*.mzML'     // my contain globs
-params.fasta = 'fasta file'
+params.fasta = 'fasta file (without decoys!)'
 params.sdrf = 'sdrf file'
 params.out = 'output directory'
 
@@ -37,7 +37,7 @@ workflow {
     //thermo_raw_files = Channel.fromPath(params.raw_files).flatten()
     mzmls = Channel.fromPath(params.mzml_files).flatten()
     sdrf = Channel.fromPath(params.sdrf).first()
-    fasta = Channel.fromPath(params.fasta).first()
+    target_fasta = Channel.fromPath(params.fasta).first()
 
     // TODO: this should go into sdrf-convert
     sage_config_file = Channel.fromPath(params.sage_config_file).first()
@@ -48,13 +48,16 @@ workflow {
     // Convert raw files to mzML
     //mzmls = raw_file_conversion(thermo_raw_files)
 
+    // create the target-decoy-DB
+    target_decoy_fasta = create_decoy_database(target_fasta, "reverse")
+
     // Identification
-    xtandem_xmls = xtandem_identification(sdrf, fasta, mzmls, params.max_missed_cleavages, params.max_parent_charge)
-    comet_mzids = comet_identification(sdrf, fasta, mzmls)
-    sage_results = sage_identification(sage_config_file, fasta, mzmls)
-    msamanda_results = msamanda_identification(msamanda_config_file, fasta, mzmls)
-    msgfplus_results = msgfplus_identification(msgfplus_params_file, fasta, mzmls)
-    maxquant_results = maxquant_identification(maxquant_params_file, fasta, mzmls)
+    xtandem_xmls = xtandem_identification(sdrf, target_decoy_fasta, mzmls, params.max_missed_cleavages, params.max_parent_charge)
+    comet_mzids = comet_identification(sdrf, target_decoy_fasta, mzmls)
+    sage_results = sage_identification(sage_config_file, target_decoy_fasta, mzmls)
+    msamanda_results = msamanda_identification(msamanda_config_file, target_decoy_fasta, mzmls)
+    msgfplus_results = msgfplus_identification(msgfplus_params_file, target_decoy_fasta, mzmls)
+    maxquant_results = maxquant_identification(maxquant_params_file, target_fasta, mzmls)
     
     // Postprocessing
 
