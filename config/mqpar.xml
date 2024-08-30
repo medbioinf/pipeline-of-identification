@@ -3,7 +3,7 @@
    <fastaFiles>
       <FastaFileInfo>
          <fastaFilePath>CHANGEME_FASTA_PATH</fastaFilePath>
-         <identifierParseRule>>([^ ]*) </identifierParseRule>
+         <identifierParseRule>>[^|]*\|(.*?)\|</identifierParseRule>
          <descriptionParseRule>>(.*)</descriptionParseRule>
          <taxonomyParseRule></taxonomyParseRule>
          <variationParseRule></variationParseRule>
@@ -26,7 +26,7 @@
    <lfqBayesQuant>False</lfqBayesQuant>
    <decoyMode>revert</decoyMode>
    <includeContaminants>False</includeContaminants>
-   <maxPeptideMass>4600</maxPeptideMass>
+   <maxPeptideMass>6000</maxPeptideMass>
    <epsilonMutationScore>True</epsilonMutationScore>
    <mutatedPeptidesSeparately>True</mutatedPeptidesSeparately>
    <proteogenomicPeptidesSeparately>True</proteogenomicPeptidesSeparately>
@@ -106,12 +106,12 @@
    <massDifferenceMods>
    </massDifferenceMods>
    <mainSearchMaxCombinations>200</mainSearchMaxCombinations>
-   <writeMsScansTable>True</writeMsScansTable>
+   <writeMsScansTable>False</writeMsScansTable>
    <writeMsmsScansTable>True</writeMsmsScansTable>
    <writePasefMsmsScansTable>True</writePasefMsmsScansTable>
    <writeAccumulatedMsmsScansTable>True</writeAccumulatedMsmsScansTable>
    <writeMs3ScansTable>True</writeMs3ScansTable>
-   <writeAllPeptidesTable>True</writeAllPeptidesTable>
+   <writeAllPeptidesTable>False</writeAllPeptidesTable>
    <writeMzRangeTable>True</writeMzRangeTable>
    <writeDiaFragmentTable>False</writeDiaFragmentTable>
    <writeDiaFragmentQuantTable>False</writeDiaFragmentQuantTable>
@@ -126,9 +126,9 @@
    <variationMode>none</variationMode>
    <useSeriesReporters>False</useSeriesReporters>
    <name>session1</name>
-   <maxQuantVersion>2.6.3.0</maxQuantVersion>
+   <maxQuantVersion>2.6.1.0</maxQuantVersion>
    <pluginFolder></pluginFolder>
-   <numThreads>16</numThreads>
+   <numThreads>4</numThreads>
    <emailAddress></emailAddress>
    <smtpHost></smtpHost>
    <emailFromAddress></emailFromAddress>
@@ -140,19 +140,18 @@
    <calcPeakProperties>False</calcPeakProperties>
    <showCentroidMassDifferences>False</showCentroidMassDifferences>
    <showIsotopeMassDifferences>False</showIsotopeMassDifferences>
-   <useDotNetCore>False</useDotNetCore>
    <profilePerformance>False</profilePerformance>
    <filePaths>
       <string>CHANGEME_FILE_PATH</string>
    </filePaths>
    <experiments>
-      <string>L1</string>
+      <string>randomExperiment</string>
    </experiments>
    <fractions>
       <short>32767</short>
    </fractions>
    <ptms>
-      <boolean>True</boolean>
+      <boolean>False</boolean>
    </ptms>
    <paramGroupIndices>
       <int>0</int>
@@ -176,25 +175,25 @@
          <andromeda20AltModelPath></andromeda20AltModelPath>
          <andromeda20DefaultModel>False</andromeda20DefaultModel>
          <useAndromeda20>False</useAndromeda20>
-         <msInstrument>5</msInstrument>
+         <msInstrument>0</msInstrument>
          <maxCharge>7</maxCharge>
          <minPeakLen>2</minPeakLen>
          <diaMinPeakLen>1</diaMinPeakLen>
-         <useMs1Centroids>True</useMs1Centroids>
-         <useMs2Centroids>True</useMs2Centroids>
+         <useMs1Centroids>False</useMs1Centroids>
+         <useMs2Centroids>False</useMs2Centroids>
          <cutPeaks>True</cutPeaks>
          <gapScans>1</gapScans>
          <minTime>NaN</minTime>
          <maxTime>NaN</maxTime>
          <matchType>MatchFromAndTo</matchType>
-         <intensityDetermination>1</intensityDetermination>
-         <centroidMatchTol>10</centroidMatchTol>
+         <intensityDetermination>0</intensityDetermination>
+         <centroidMatchTol>8</centroidMatchTol>
          <centroidMatchTolInPpm>True</centroidMatchTolInPpm>
          <centroidHalfWidth>35</centroidHalfWidth>
          <centroidHalfWidthInPpm>True</centroidHalfWidthInPpm>
-         <valleyFactor>1.1</valleyFactor>
+         <valleyFactor>1.4</valleyFactor>
          <isotopeValleyFactor>1.2</isotopeValleyFactor>
-         <advancedPeakSplitting>True</advancedPeakSplitting>
+         <advancedPeakSplitting>False</advancedPeakSplitting>
          <intensityThresholdMs1Dda>0</intensityThresholdMs1Dda>
          <intensityThresholdMs1Dia>0</intensityThresholdMs1Dia>
          <intensityThresholdMs2>0</intensityThresholdMs2>
@@ -220,7 +219,7 @@
          <maxLabeledAa>0</maxLabeledAa>
          <maxNmods>5</maxNmods>
          <maxMissedCleavages>2</maxMissedCleavages>
-         <maxMissedCleavagesDia>2</maxMissedCleavagesDia>
+         <maxMissedCleavagesDia>1</maxMissedCleavagesDia>
          <multiplicity>1</multiplicity>
          <enzymeMode>0</enzymeMode>
          <complementaryReporterType>0</complementaryReporterType>
@@ -257,16 +256,16 @@
          </additionalVariableModificationProteins>
          <doMassFiltering>True</doMassFiltering>
          <firstSearchTol>20</firstSearchTol>
-         <mainSearchTol>10</mainSearchTol>
+         <mainSearchTol>4.5</mainSearchTol>
          <searchTolInPpm>True</searchTolInPpm>
-         <isotopeMatchTol>0.005</isotopeMatchTol>
-         <isotopeMatchTolInPpm>False</isotopeMatchTolInPpm>
+         <isotopeMatchTol>2</isotopeMatchTol>
+         <isotopeMatchTolInPpm>True</isotopeMatchTolInPpm>
          <isotopeTimeCorrelation>0.6</isotopeTimeCorrelation>
          <theorIsotopeCorrelation>0.6</theorIsotopeCorrelation>
-         <checkMassDeficit>False</checkMassDeficit>
+         <checkMassDeficit>True</checkMassDeficit>
          <recalibrationInPpm>True</recalibrationInPpm>
-         <intensityDependentCalibration>True</intensityDependentCalibration>
-         <minScoreForCalibration>40</minScoreForCalibration>
+         <intensityDependentCalibration>False</intensityDependentCalibration>
+         <minScoreForCalibration>70</minScoreForCalibration>
          <matchLibraryFile>False</matchLibraryFile>
          <libraryFile></libraryFile>
          <matchLibraryMassTolPpm>0</matchLibraryMassTolPpm>
@@ -324,7 +323,7 @@
          <diaLabelIndsForLibraryMatch>
          </diaLabelIndsForLibraryMatch>
          <diaInitialPrecMassTolPpm>20</diaInitialPrecMassTolPpm>
-         <diaInitialFragMassTolPpm>25</diaInitialFragMassTolPpm>
+         <diaInitialFragMassTolPpm>20</diaInitialFragMassTolPpm>
          <diaCorrThresholdFeatureClustering>0.85</diaCorrThresholdFeatureClustering>
          <diaPrecTolPpmFeatureClustering>2</diaPrecTolPpmFeatureClustering>
          <diaFragTolPpmFeatureClustering>2</diaFragTolPpmFeatureClustering>
@@ -380,8 +379,8 @@
          <diaMaxPrecursorMz>0</diaMaxPrecursorMz>
          <diaHardRtFilter>True</diaHardRtFilter>
          <diaConvertLibraryCharge2Fragments>False</diaConvertLibraryCharge2Fragments>
-         <diaChargeNormalizationLibrary>False</diaChargeNormalizationLibrary>
-         <diaChargeNormalizationSample>False</diaChargeNormalizationSample>
+         <diaChargeNormalizationLibrary>True</diaChargeNormalizationLibrary>
+         <diaChargeNormalizationSample>True</diaChargeNormalizationSample>
          <diaDeleteIntermediateResults>True</diaDeleteIntermediateResults>
          <diaScoreWeightScanIndex>-1</diaScoreWeightScanIndex>
          <diaScoreWeightScanValue>1</diaScoreWeightScanValue>
@@ -421,12 +420,9 @@
          <diaBestPrecursorChargeForQuant>False</diaBestPrecursorChargeForQuant>
          <diaBestPrecursorMassRangeForQuant>False</diaBestPrecursorMassRangeForQuant>
          <diaBestPrecursorIntensityForQuant>False</diaBestPrecursorIntensityForQuant>
-         <diaPtmLocMethod>1</diaPtmLocMethod>
-         <diaIndexedSearch>True</diaIndexedSearch>
-         <diaIncreaseSequenceCoverage>True</diaIncreaseSequenceCoverage>
+         <diaPtmLocMethod>0</diaPtmLocMethod>
+         <diaIncreaseSequenceCoverage>False</diaIncreaseSequenceCoverage>
          <diaSequenceCoverageFdr>0.05</diaSequenceCoverageFdr>
-         <diaHasIntensitiesForMl>True</diaHasIntensitiesForMl>
-         <diaFdrCvIncludeCharge>True</diaFdrCvIncludeCharge>
       </parameterGroup>
    </parameterGroups>
    <msmsParamsArray>

@@ -4,4 +4,4 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - conda-forge::dotnet=8.0.302
+  - conda-forge::dotnet=7.0.404

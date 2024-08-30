@@ -1,6 +1,6 @@
 nextflow.enable.dsl=2
 
-maxquant_image = 'medbioinf/maxquant'
+maxquant_image = 'medbioinf/maxquant:v2.6.1.0'
 
 // number of threads used by maxquant
 params.maxquant_threads = 16
@@ -28,13 +28,15 @@ process identification_with_maxquant {
     cpus { params.maxquant_threads }
     container { maxquant_image }
 
+    stageInMode 'copy'  // MaxQuant respectively Mono does not support symlinks
+    
     input:
     path maxquant_params_file
     path fasta
     path mzmls
 
     output:
-    path "${mzmls.baseName}-msms.txt"
+    path "${mzmls.baseName}_msms.txt"
 
     """
     # adjust the mqpar.xml file for our current search and path
@@ -48,7 +50,6 @@ process identification_with_maxquant {
     # execute the identification
     dotnet /opt/MaxQuant/bin/MaxQuantCmd.dll mqpar_adjusted_new.xml
 
-    # rename the file to contain the mzML basename
-    mv ./combined/txt/msms.txt ./${mzmls.baseName}-msms.txt
+    mv combined/txt/msms.txt ${mzmls.baseName}_msms.txt
     """
 }
