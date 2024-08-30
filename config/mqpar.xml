@@ -77,8 +77,8 @@
    <isotopeCalc>False</isotopeCalc>
    <minPeptideLength>7</minPeptideLength>
    <psmFdrCrosslink>0.01</psmFdrCrosslink>
-   <peptideFdr>99.99</peptideFdr>
-   <proteinFdr>99.99</proteinFdr>
+   <peptideFdr>9.99</peptideFdr>
+   <proteinFdr>9.99</proteinFdr>
    <siteFdr>0.01</siteFdr>
    <minPeptideLengthForUnspecificSearch>8</minPeptideLengthForUnspecificSearch>
    <maxPeptideLengthForUnspecificSearch>25</maxPeptideLengthForUnspecificSearch>
@@ -179,8 +179,8 @@
          <maxCharge>7</maxCharge>
          <minPeakLen>2</minPeakLen>
          <diaMinPeakLen>1</diaMinPeakLen>
-         <useMs1Centroids>False</useMs1Centroids>
-         <useMs2Centroids>False</useMs2Centroids>
+         <useMs1Centroids>True</useMs1Centroids>
+         <useMs2Centroids>True</useMs2Centroids>
          <cutPeaks>True</cutPeaks>
          <gapScans>1</gapScans>
          <minTime>NaN</minTime>
