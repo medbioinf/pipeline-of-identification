@@ -1,5 +1,7 @@
 nextflow.enable.dsl=2
 
+nextflow.preview.output = true
+
 // including modules
 include {raw_file_conversion} from workflow.projectDir + '/src/preprocess/raw_file_conversion.nf'
 include {create_decoy_database} from workflow.projectDir + '/src/preprocess/create_decoy_database.nf'
@@ -64,4 +66,18 @@ workflow {
     //pia_tda_comet = pia_tda_analysis(comet_mzids)
 
     // Analysis of the data
+
+    publish:
+    // publish the data in the "out" directory
+    xtandem_xmls >> 'xtandem'
+    comet_mzids >> 'comet'
+    sage_results >> 'sage'
+    msamanda_results >> 'msamanda'
+    msgfplus_results >> 'msgfplus'
+    maxquant_results >> 'maxquant'
+}
+
+output {
+    directory "${params.out}"
+    mode 'copy'
 }
