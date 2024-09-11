@@ -6,6 +6,7 @@ python_image = 'medbioinf/ident-comparison-python'
 // number of threads used by xtandem
 params.xtandem_threads = 16
 
+include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
 
 /**
  * Exports the identification using Comet configured by a SDRF files
@@ -24,9 +25,18 @@ workflow xtandem_identification {
 
         tandem_xmls = identification_with_xtandem(xtandem_param_files, taxonomy_file, fasta, mzmls.collect())
         tandem_xmls = tandem_xmls.flatten()
+
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(tandem_xmls, 'xtandem', 'xtandem')
+        psm_tsvs = psm_tsvs_and_pin[0]
+        pin_files = psm_tsvs_and_pin[1]
+
+        // percolator
+        // ms2rescore
     
     emit:
         tandem_xmls
+        psm_tsvs
+        pin_files
 }
 
 

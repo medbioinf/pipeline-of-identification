@@ -6,6 +6,7 @@ python_image = 'medbioinf/ident-comparison-python'
 // number of threads used by sage
 params.sage_threads = 16
 
+include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
 
 /**
  * Executes the identification using Sage
@@ -30,8 +31,17 @@ workflow sage_identification {
             .toList()
             .transpose()
         
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(separated_results.sage_tsv.flatten(), 'sage_tsv', 'sage')
+        psm_tsvs = psm_tsvs_and_pin[0]
+        pin_files = psm_tsvs_and_pin[1]
+
+        // percolator
+        // ms2rescore
+        
     emit:
         return_files
+        psm_tsvs
+        pin_files
 }
 
 

@@ -6,6 +6,7 @@ python_image = 'medbioinf/ident-comparison-python'
 // number of threads used by comet
 params.comet_threads = 16
 
+include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
 
 /**
  * Exports the identification using Comet configured by a SDRF files
@@ -28,8 +29,17 @@ workflow comet_identification {
         comet_mzids = identification_with_comet(mzml_and_param_file, fasta, mzmls.collect(), comet_param_files.collect())
         comet_mzids = comet_mzids.flatten()
         
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(comet_mzids, 'mzid', 'comet')
+        psm_tsvs = psm_tsvs_and_pin[0]
+        pin_files = psm_tsvs_and_pin[1]
+
+        // percolator
+        // ms2rescore
+
     emit:
         comet_mzids
+        psm_tsvs
+        pin_files
 }
 
 /**
@@ -66,6 +76,7 @@ process create_comet_param_files_from_sdrf {
     python -m sdrf_convert $sdrf comet --config-folder ./ $default_comet_params_file
     """
 }
+
 
 process identification_with_comet {
     cpus { params.comet_threads }

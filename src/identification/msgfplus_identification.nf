@@ -1,11 +1,12 @@
 nextflow.enable.dsl=2
 
 msgfplus_image = 'quay.io/medbioinf/msgfplus:v2024.03.26'
-python_image = 'medbioinf/ident-comparison-python'
 
 // number of threads used by msamanda
 params.msgfplus_threads = 16
 params.msgfplus_mem_gb = 16
+
+include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
 
 /**
  * Executes the identification using MS-GF+
@@ -20,9 +21,18 @@ workflow msgfplus_identification {
 
     main:
         msgfplus_results = identification_with_msgfplus(msgfplus_params_file, fasta, mzmls)
+
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(msgfplus_results, 'mzid', 'msgfplus')
+        psm_tsvs = psm_tsvs_and_pin[0]
+        pin_files = psm_tsvs_and_pin[1]
+
+        // percolator
+        // ms2rescore
         
     emit:
         msgfplus_results
+        psm_tsvs
+        pin_files
 }
 
 

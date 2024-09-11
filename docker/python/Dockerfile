@@ -6,6 +6,12 @@ WORKDIR /home/mambauser
 COPY --chown=mambauser:mambauser environment.yml .
 COPY --chown=mambauser:mambauser requirements.txt .
 
+USER root
+
+RUN apt update \
+    && apt install -y libglib2.0-0 \
+    && apt clean
+
 USER mambauser
 ENV HOME /home/mambauser
 ENV ENV_NAME=medbioinforub-ident-comparison
@@ -14,7 +20,6 @@ RUN echo 'show_banner: false' > ~/.mambarc
 
 RUN micromamba env create -y -f environment.yml \
     && micromamba clean --all --yes
-
 
 USER root
 # First is necessary for base_image to actvate the conda environment second is entrypoint

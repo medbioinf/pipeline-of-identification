@@ -5,6 +5,8 @@ maxquant_image = 'medbioinf/maxquant:v2.6.1.0'
 // number of threads used by maxquant
 params.maxquant_threads = 16
 
+include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
+
 /**
  * Executes the identification using MaxQuant
  *
@@ -18,9 +20,18 @@ workflow maxquant_identification {
 
     main:
         maxquant_results = identification_with_maxquant(maxquant_params_file, fasta, mzmls)
-        
+
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(maxquant_results, 'msms', 'maxquant')
+        psm_tsvs = psm_tsvs_and_pin[0]
+        pin_files = psm_tsvs_and_pin[1]
+
+        // percolator
+        // ms2rescore
+
     emit:
         maxquant_results
+        psm_tsvs
+        pin_files
 }
 
 

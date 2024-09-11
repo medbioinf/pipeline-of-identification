@@ -54,7 +54,7 @@ workflow {
     target_decoy_fasta = create_decoy_database(target_fasta, "reverse")
 
     // Identification
-    xtandem_xmls = xtandem_identification(sdrf, target_decoy_fasta, mzmls, params.max_missed_cleavages, params.max_parent_charge)
+    xtandem_results = xtandem_identification(sdrf, target_decoy_fasta, mzmls, params.max_missed_cleavages, params.max_parent_charge)
     comet_mzids = comet_identification(sdrf, target_decoy_fasta, mzmls)
     sage_results = sage_identification(sage_config_file, target_decoy_fasta, mzmls)
     msamanda_results = msamanda_identification(msamanda_config_file, target_decoy_fasta, mzmls)
@@ -69,7 +69,7 @@ workflow {
 
     publish:
     // publish the data in the "out" directory
-    xtandem_xmls >> 'xtandem'
+    xtandem_results >> 'xtandem'
     comet_mzids >> 'comet'
     sage_results >> 'sage'
     msamanda_results >> 'msamanda'
