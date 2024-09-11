@@ -62,11 +62,14 @@ process enhance_psms_and_create_pin {
     val searchengine
 
     output:
-    path "*.enhanced.tsv", emit: psm_tsv
-    path "*.pin", emit: pin_file
+    path "${psm_utils_tsv.baseName}.enhanced.tsv", emit: psm_tsv
+    path "${psm_utils_tsv.baseName}.pin", emit: pin_file
 
     """
     adjust_psm_list.py -in_file ${psm_utils_tsv} -out_file ${psm_utils_tsv.baseName}.adjusted.tsv -searchengine ${searchengine}
-    psms_to_pin_and_enhancedTSV.py -in_file ${psm_utils_tsv.baseName}.adjusted.tsv -out_file ${psm_utils_tsv.baseName}.enhanced.tsv -out_pin  ${psm_utils_tsv.baseName}.pin -searchengine ${searchengine}
+    psms_to_pin_and_enhancedTSV.py -in_file ${psm_utils_tsv.baseName}.adjusted.tsv -out_file ${psm_utils_tsv.baseName}.enhanced.tsv -out_pin  ${psm_utils_tsv.baseName}.pre.pin -searchengine ${searchengine}
+
+    # correct the PIN file by moving the scan number to third column and adding correct SpecId (increasing integer)
+    awk '{FS="\t";OFS="\t"; if (NR>1) { \$3=\$1; \$1=NR-1; gsub(".*scan=", "", \$3)  } print}' ${psm_utils_tsv.baseName}.pre.pin > ${psm_utils_tsv.baseName}.pin
     """
 }
