@@ -7,6 +7,7 @@ python_image = 'medbioinf/ident-comparison-python'
 params.xtandem_threads = 16
 
 include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
+include {psm_percolator} from workflow.projectDir + '/src/postprocessing/percolator.nf'
 
 /**
  * Exports the identification using Comet configured by a SDRF files
@@ -30,13 +31,14 @@ workflow xtandem_identification {
         psm_tsvs = psm_tsvs_and_pin[0]
         pin_files = psm_tsvs_and_pin[1]
 
-        // percolator
+        pout_files = psm_percolator(pin_files)
+
         // ms2rescore
     
     emit:
         tandem_xmls
         psm_tsvs
-        pin_files
+        pout_files
 }
 
 

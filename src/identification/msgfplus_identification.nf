@@ -7,6 +7,7 @@ params.msgfplus_threads = 16
 params.msgfplus_mem_gb = 16
 
 include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
+include {psm_percolator} from workflow.projectDir + '/src/postprocessing/percolator.nf'
 
 /**
  * Executes the identification using MS-GF+
@@ -26,13 +27,14 @@ workflow msgfplus_identification {
         psm_tsvs = psm_tsvs_and_pin[0]
         pin_files = psm_tsvs_and_pin[1]
 
-        // percolator
+        pout_files = psm_percolator(pin_files)
+
         // ms2rescore
         
     emit:
         msgfplus_results
         psm_tsvs
-        pin_files
+        pout_files
 }
 
 
