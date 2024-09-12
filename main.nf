@@ -13,8 +13,6 @@ include {msamanda_identification} from workflow.projectDir + '/src/identificatio
 include {msgfplus_identification} from workflow.projectDir + '/src/identification/msgfplus_identification.nf'
 include {maxquant_identification} from workflow.projectDir + '/src/identification/maxquant_identification.nf'
 
-include {pia_tda_analysis} from workflow.projectDir + '/src/postprocessing/pia_tda.nf'
-
 
 // parameters set by the command line
 //params.raws = 'directory with raw files'

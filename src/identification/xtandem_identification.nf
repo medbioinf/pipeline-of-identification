@@ -36,11 +36,15 @@ workflow xtandem_identification {
 
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.drop('xtandem_identification_'.length()).take(it.name.lastIndexOf('.t.xml') - 'xtandem_identification_'.length()) ] }
         ms2rescore_results = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), 'xtandem')
+        mokapot_results = ms2rescore_results[0]
+        mokapot_features = ms2rescore_results[1]
     
     emit:
         tandem_xmls
         psm_tsvs
         pout_files
+        mokapot_results
+        mokapot_features
 }
 
 

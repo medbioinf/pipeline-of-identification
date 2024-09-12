@@ -37,11 +37,15 @@ workflow msamanda_identification {
 
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_output.mzid')) + '.mzML'  ] }
         ms2rescore_results = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), 'msamanda')
+        mokapot_results = ms2rescore_results[0]
+        mokapot_features = ms2rescore_results[1]
 
     emit:
         return_files
         psm_tsvs
         pout_files
+        mokapot_results
+        mokapot_features
 }
 
 

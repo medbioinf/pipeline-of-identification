@@ -39,12 +39,15 @@ workflow comet_identification {
 
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
         ms2rescore_results = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), 'comet')
+        mokapot_results = ms2rescore_results[0]
+        mokapot_features = ms2rescore_results[1]
 
     emit:
         comet_mzids
         psm_tsvs
         pout_files
-        
+        mokapot_results
+        mokapot_features
 }
 
 /**

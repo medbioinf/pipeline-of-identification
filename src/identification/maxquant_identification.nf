@@ -31,12 +31,15 @@ workflow maxquant_identification {
 
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_msms')) + '.mzML'  ] }
         ms2rescore_results = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), 'maxquant')
+        mokapot_results = ms2rescore_results[0]
+        mokapot_features = ms2rescore_results[1]
 
     emit:
         maxquant_results
         psm_tsvs
         pout_files
-        
+        mokapot_results
+        mokapot_features
 }
 
 
