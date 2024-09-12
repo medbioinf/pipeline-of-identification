@@ -8,6 +8,7 @@ params.msgfplus_mem_gb = 16
 
 include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
 include {psm_percolator} from workflow.projectDir + '/src/postprocessing/percolator.nf'
+include {ms2rescore_workflow} from workflow.projectDir + '/src/postprocessing/ms2rescore.nf'
 
 /**
  * Executes the identification using MS-GF+
@@ -29,7 +30,8 @@ workflow msgfplus_identification {
 
         pout_files = psm_percolator(pin_files)
 
-        // ms2rescore
+        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
+        ms2rescore_results = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), 'msgfplus')
         
     emit:
         msgfplus_results
