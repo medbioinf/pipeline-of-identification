@@ -6,6 +6,7 @@ msamanda_image = 'quay.io/medbioinf/msamanda:3.0.22.071'
 params.msamanda_threads = 16
 
 include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
+include {target_decoy_approach} from workflow.projectDir + '/src/postprocessing/default_target_decoy_approach.nf'
 include {psm_percolator} from workflow.projectDir + '/src/postprocessing/percolator.nf'
 include {ms2rescore_workflow} from workflow.projectDir + '/src/postprocessing/ms2rescore.nf'
 
@@ -33,6 +34,8 @@ workflow msamanda_identification {
         psm_tsvs = psm_tsvs_and_pin[0]
         pin_files = psm_tsvs_and_pin[1]
 
+        tda_results = target_decoy_approach(psm_tsvs, 'msamanda')
+
         pout_files = psm_percolator(pin_files)
 
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_output.mzid')) + '.mzML'  ] }
@@ -43,6 +46,7 @@ workflow msamanda_identification {
     emit:
         return_files
         psm_tsvs
+        tda_results
         pout_files
         mokapot_results
         mokapot_features

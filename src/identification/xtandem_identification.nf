@@ -7,6 +7,7 @@ python_image = 'medbioinf/ident-comparison-python'
 params.xtandem_threads = 16
 
 include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
+include {target_decoy_approach} from workflow.projectDir + '/src/postprocessing/default_target_decoy_approach.nf'
 include {psm_percolator} from workflow.projectDir + '/src/postprocessing/percolator.nf'
 include {ms2rescore_workflow} from workflow.projectDir + '/src/postprocessing/ms2rescore.nf'
 
@@ -32,6 +33,8 @@ workflow xtandem_identification {
         psm_tsvs = psm_tsvs_and_pin[0]
         pin_files = psm_tsvs_and_pin[1]
 
+        tda_results = target_decoy_approach(psm_tsvs, 'xtandem')
+
         pout_files = psm_percolator(pin_files)
 
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.drop('xtandem_identification_'.length()).take(it.name.lastIndexOf('.t.xml') - 'xtandem_identification_'.length()) ] }
@@ -42,6 +45,7 @@ workflow xtandem_identification {
     emit:
         tandem_xmls
         psm_tsvs
+        tda_results
         pout_files
         mokapot_results
         mokapot_features
