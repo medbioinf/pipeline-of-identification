@@ -41,6 +41,7 @@ workflow maxquant_identification {
         maxquant_results
         psm_tsvs
         tda_results
+        pin_files
         pout_files
         mokapot_results
         mokapot_features

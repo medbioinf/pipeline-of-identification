@@ -49,6 +49,7 @@ workflow comet_identification {
         comet_mzids
         psm_tsvs
         tda_results
+        pin_files
         pout_files
         mokapot_results
         mokapot_features
