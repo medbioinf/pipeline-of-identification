@@ -12,10 +12,9 @@ process convert_thermo_raw_files {
     output:
     path "${raw.baseName}.mzML"
 
-
     script:
     """
-    wine msconvert ${raw} --mzML --zlib --filter "peakPicking true 1-"
+    wine msconvert --mzML --zlib=off --filter "peakPicking vendor" ${raw}
     """
 }
 

@@ -4,7 +4,7 @@
 work/
 # binary
 nextflow
-
+trace*
 
 ##### python stuff
 # Byte-compiled / optimized / DLL files
