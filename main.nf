@@ -13,66 +13,53 @@ include {msamanda_identification} from workflow.projectDir + '/src/identificatio
 include {msgfplus_identification} from workflow.projectDir + '/src/identification/msgfplus_identification.nf'
 include {maxquant_identification} from workflow.projectDir + '/src/identification/maxquant_identification.nf'
 
-
 // parameters set by the command line
-//params.raws = 'directory with raw files'
-params.mzml_files = '*.mzML'     // my contain globs
-params.fasta = 'fasta file (without decoys!)'
-params.sdrf = 'sdrf file'
-params.out = 'output directory'
+params.mzml_files = '*.mzML'     // may contain globs
+params.fasta = 'sprot.fasta'
+params.out = './pipeline_results'
+params.precursor_tol_ppm = 10
+params.fragment_tol_da = 0.02
 
-// TODO: set these in a useful way
-params.max_missed_cleavages = 2
-params.max_parent_charge = 4
-
-/** TODO: set the num_threads someway useful */
-
-// TODO: create these with sdrf-convert
-params.sage_config_file = "${baseDir}/config/sage_config.json"
+// default parameter files
+params.comet_params_file = "${baseDir}/config/comet.params"
+params.maxquant_params_file = "${baseDir}/config/mqpar.xml"
 params.msamanda_config_file = "${baseDir}/config/msamanda_settings.xml"
 params.msgfplus_params_file = "${baseDir}/config/MSGFPlus_Params.txt"
-params.maxquant_params_file = "${baseDir}/config/mqpar.xml"
+params.sage_config_file = "${baseDir}/config/sage_config.json"
+params.xtandem_config_file = "${baseDir}/config/xtandem_input.xml"
 
 workflow {
     //thermo_raw_files = Channel.fromPath(params.raw_files).flatten()
     mzmls = Channel.fromPath(params.mzml_files).flatten()
-    sdrf = Channel.fromPath(params.sdrf).first()
     target_fasta = Channel.fromPath(params.fasta).first()
 
-    // TODO: this should go into sdrf-convert
-    sage_config_file = Channel.fromPath(params.sage_config_file).first()
+    // get the (default) params / config files
+    comet_params_file = Channel.fromPath(params.comet_params_file).first()
+    maxquant_params_file = Channel.fromPath(params.maxquant_params_file).first()
     msamanda_config_file = Channel.fromPath(params.msamanda_config_file).first()
     msgfplus_params_file = Channel.fromPath(params.msgfplus_params_file).first()
-    maxquant_params_file = Channel.fromPath(params.maxquant_params_file).first()
-
-    // Convert raw files to mzML
-    //mzmls = raw_file_conversion(thermo_raw_files)
+    sage_config_file = Channel.fromPath(params.sage_config_file).first()
+    xtandem_config_file = Channel.fromPath(params.xtandem_config_file).first()
 
     // create the target-decoy-DB
     target_decoy_fasta = create_decoy_database(target_fasta, "reverse")
 
     // Identification
-    xtandem_results = xtandem_identification(sdrf, target_decoy_fasta, mzmls, params.max_missed_cleavages, params.max_parent_charge)
-    comet_mzids = comet_identification(sdrf, target_decoy_fasta, mzmls)
-    sage_results = sage_identification(sage_config_file, target_decoy_fasta, mzmls)
-    msamanda_results = msamanda_identification(msamanda_config_file, target_decoy_fasta, mzmls)
-    msgfplus_results = msgfplus_identification(msgfplus_params_file, target_decoy_fasta, mzmls)
-    maxquant_results = maxquant_identification(maxquant_params_file, target_fasta, mzmls)
-    
-    // Postprocessing
-
-    //pia_tda_comet = pia_tda_analysis(comet_mzids)
-
-    // Analysis of the data
+    comet_results = comet_identification(comet_params_file, target_decoy_fasta, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
+    maxquant_results = maxquant_identification(maxquant_params_file, target_fasta, mzmls, params.precursor_tol_ppm)
+    msamanda_results = msamanda_identification(msamanda_config_file, target_decoy_fasta, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
+    msgfplus_results = msgfplus_identification(msgfplus_params_file, target_decoy_fasta, mzmls, params.precursor_tol_ppm)
+    sage_results = sage_identification(sage_config_file, target_decoy_fasta, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
+    xtandem_results = xtandem_identification(xtandem_config_file, target_decoy_fasta, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
 
     publish:
     // publish the data in the "out" directory
-    xtandem_results >> 'xtandem'
-    comet_mzids >> 'comet'
-    sage_results >> 'sage'
+    comet_results >> 'comet'
+    maxquant_results >> 'maxquant'
     msamanda_results >> 'msamanda'
     msgfplus_results >> 'msgfplus'
-    maxquant_results >> 'maxquant'
+    sage_results >> 'sage'
+    xtandem_results >> 'xtandem'
 }
 
 output {
