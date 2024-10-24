@@ -4,7 +4,8 @@ sage_image = 'quay.io/medbioinf/sage:v0.14.7'
 python_image = 'medbioinf/ident-comparison-python'
 
 // number of threads used by sage
-params.sage_threads = 16
+params.sage_threads = 1
+params.sage_mem = "100 GB"
 
 include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
 include {target_decoy_approach} from workflow.projectDir + '/src/postprocessing/default_target_decoy_approach.nf'
@@ -18,13 +19,16 @@ include {ms2rescore_workflow} from workflow.projectDir + '/src/postprocessing/ms
  */
 workflow sage_identification {
     take:
-        sage_config_file
+        default_config_file
         fasta
         mzmls
+        precursor_tol_ppm
+        fragment_tol_da
 
     main:
+        sage_config_file = adjust_sage_config(default_config_file, precursor_tol_ppm, fragment_tol_da)
+
         // all mzMLs are processed at once in sage for now -> much faster
-        // this will break as soon as in one SDRF different params are given
         sage_results = identification_with_sage(sage_config_file, fasta, mzmls.collect())
         separated_results = separate_sage_results(sage_results.sage_pin, sage_results.sage_tsv)
 
@@ -58,8 +62,42 @@ workflow sage_identification {
 }
 
 
+process adjust_sage_config {
+    cpus 2
+    memory "1 GB"
+    container { python_image }
+
+    input:
+    path default_config_file
+    val precursor_tol_ppm
+    val fragment_tol_da
+
+    output:
+    path "adjusted_sage_config.json"
+
+    """
+#!/usr/bin/env python
+import json
+
+# Opening JSON file
+with open("${default_config_file}", 'r') as openfile:
+    # Reading from json file
+    json_object = json.load(openfile)
+
+# adjust the tolerances
+json_object["precursor_tol"] = {'ppm': [-${precursor_tol_ppm}, ${precursor_tol_ppm}]}
+json_object["fragment_tol"] = {'da': [-${fragment_tol_da}, ${fragment_tol_da}]}
+
+# Writing to sample.json
+with open("./adjusted_sage_config.json", "w") as outfile:
+    json.dump(json_object, outfile)
+    """
+}
+
+
 process identification_with_sage {
     cpus { params.sage_threads }
+    memory { params.sage_mem }
     container { sage_image }
 
     input:
@@ -72,12 +110,14 @@ process identification_with_sage {
     path "results.sage.tsv", emit: sage_tsv
 
     """
-    RAYON_NUM_THREADS=${params.sage_threads} sage ${sage_config_file} -f ${fasta} --write-pin --output_directory ./ ${mzmls}
+    RAYON_NUM_THREADS=${params.sage_threads} sage ${sage_config_file} -f ${fasta} --batch-size ${params.sage_threads} --write-pin --output_directory ./ ${mzmls}
     """
 }
 
 
 process separate_sage_results {
+    cpus 2
+    memory "1 GB"
     container { python_image }
 
     input:

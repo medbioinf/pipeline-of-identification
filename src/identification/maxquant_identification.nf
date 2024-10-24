@@ -4,6 +4,7 @@ maxquant_image = 'medbioinf/maxquant:v2.6.1.0'
 
 // number of threads used by maxquant
 params.maxquant_threads = 16
+params.maxquant_mem = "32 GB"
 
 include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
 include {target_decoy_approach} from workflow.projectDir + '/src/postprocessing/default_target_decoy_approach.nf'
@@ -20,9 +21,10 @@ workflow maxquant_identification {
         maxquant_params_file
         fasta
         mzmls
+        precursor_tol_ppm
 
     main:
-        maxquant_results = identification_with_maxquant(maxquant_params_file, fasta, mzmls)
+        maxquant_results = identification_with_maxquant(maxquant_params_file, fasta, mzmls, precursor_tol_ppm)
 
         psm_tsvs_and_pin = convert_and_enhance_psm_tsv(maxquant_results, 'msms', 'maxquant')
         psm_tsvs = psm_tsvs_and_pin[0]
@@ -50,6 +52,7 @@ workflow maxquant_identification {
 
 process identification_with_maxquant {
     cpus { params.maxquant_threads }
+    memory { params.maxquant_mem }
     container { maxquant_image }
 
     stageInMode 'copy'  // MaxQuant respectively Mono does not support symlinks
@@ -58,6 +61,7 @@ process identification_with_maxquant {
     path maxquant_params_file
     path fasta
     path mzmls
+    val precursor_tol_ppm
 
     output:
     path "${mzmls.baseName}_msms.txt"
@@ -68,6 +72,9 @@ process identification_with_maxquant {
     sed -i "s;<numThreads>[^<]*</numThreads>;<numThreads>${params.maxquant_threads}</numThreads>;" mqpar_adjusted.xml
     sed -i "s;<fastaFilePath>[^<]*</fastaFilePath>;<fastaFilePath>${fasta}</fastaFilePath>;" mqpar_adjusted.xml
     sed -i "s;<string>CHANGEME_FILE_PATH</string>;<string>${mzmls}</string>;" mqpar_adjusted.xml
+    
+    sed -i "s;<firstSearchTol>[^<]*</firstSearchTol>;<firstSearchTol>${precursor_tol_ppm}</firstSearchTol>;" mqpar_adjusted.xml
+    sed -i "s;<searchTolInPpm>[^<]*</searchTolInPpm>;<searchTolInPpm>True</searchTolInPpm>;" mqpar_adjusted.xml
 
     dotnet /opt/MaxQuant/bin/MaxQuantCmd.dll mqpar_adjusted.xml --changeFolder mqpar_adjusted_new.xml ./ ./
 

@@ -94,7 +94,6 @@
    <restrictProteinQuantification>True</restrictProteinQuantification>
    <restrictMods>
       <string>Oxidation (M)</string>
-      <string>Acetyl (Protein N-term)</string>
    </restrictMods>
    <matchingTimeWindow>0</matchingTimeWindow>
    <matchingIonMobilityWindow>0</matchingIonMobilityWindow>
@@ -238,7 +237,6 @@
          <useVariableModificationsFirstSearch>False</useVariableModificationsFirstSearch>
          <variableModifications>
             <string>Oxidation (M)</string>
-            <string>Acetyl (Protein N-term)</string>
          </variableModifications>
          <useMultiModification>False</useMultiModification>
          <multiModifications>

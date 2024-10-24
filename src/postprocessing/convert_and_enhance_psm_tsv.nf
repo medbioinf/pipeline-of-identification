@@ -27,8 +27,7 @@ workflow convert_and_enhance_psm_tsv {
  */
 process convert_searchengine_to_psm_utils {
     cpus 2
-    memory '24GB'
-
+    memory '60 GB'
     container { python_image }
 
     input:
@@ -53,8 +52,7 @@ process convert_searchengine_to_psm_utils {
  */
 process enhance_psms_and_create_pin {
     cpus 2
-    memory '8GB'
-
+    memory '8 GB'
     container { python_image }
 
     input:

@@ -4,6 +4,7 @@ percolator_image = 'quay.io/medbioinf/percolator:3.6.5'
 
 // number of threads used by percolator
 params.percolator_threads = 4
+params.percolator_mem = "4 GB"
 
 /**
  * Executes percolator for the given PIN files
@@ -24,8 +25,7 @@ workflow psm_percolator {
 
 process run_percolator {
     cpus  { params.percolator_threads }
-    memory '8GB'
-
+    memory { params.percolator_mem }
     container { percolator_image }
 
     input:

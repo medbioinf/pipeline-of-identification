@@ -21,9 +21,10 @@ workflow msgfplus_identification {
         msgfplus_params_file
         fasta
         mzmls
+        precursor_tol_ppm
 
     main:
-        msgfplus_results = identification_with_msgfplus(msgfplus_params_file, fasta, mzmls)
+        msgfplus_results = identification_with_msgfplus(msgfplus_params_file, fasta, mzmls, precursor_tol_ppm)
 
         psm_tsvs_and_pin = convert_and_enhance_psm_tsv(msgfplus_results, 'mzid', 'msgfplus')
         psm_tsvs = psm_tsvs_and_pin[0]
@@ -58,11 +59,15 @@ process identification_with_msgfplus {
     path msgfplus_params_file
     path fasta
     path mzmls
+    val precursor_tol_ppm
 
     output:
     path "${mzmls.baseName}.mzid"
 
     """
-    java -Xmx${params.msgfplus_mem_gb}G -jar /opt/msgfplus/MSGFPlus.jar -conf ${msgfplus_params_file} -s ${mzmls} -d ${fasta} -thread ${params.msgfplus_threads} -o ${mzmls.baseName}.mzid
+    cp ${msgfplus_params_file} adjusted_MSGFPlus_Params.txt
+    sed -i 's;PrecursorMassTolerance=.*;PrecursorMassTolerance=${precursor_tol_ppm};' adjusted_MSGFPlus_Params.txt
+
+    java -Xmx${params.msgfplus_mem_gb}G -jar /opt/msgfplus/MSGFPlus.jar -conf adjusted_MSGFPlus_Params.txt -s ${mzmls} -d ${fasta} -thread ${params.msgfplus_threads} -o ${mzmls.baseName}.mzid
     """
 }

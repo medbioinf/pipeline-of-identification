@@ -1,2 +1,1 @@
-git+https://github.com/elixir-proteomics-community/sdrf_convert
-psm-utils~=1.0.0
+psm-utils~=1.1.0

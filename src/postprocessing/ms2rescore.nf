@@ -4,6 +4,7 @@ ms2rescore_image = 'medbioinf/ident-comparison-ms2rescore'
 
 // number of threads used by ms2rescore
 params.ms2rescore_threads = 4
+params.ms2rescore_mem = "64 GB"
 
 
 workflow ms2rescore_workflow {
@@ -24,7 +25,7 @@ workflow ms2rescore_workflow {
 
 process run_ms2rescore {
     cpus  { params.ms2rescore_threads }
-    memory '48GB'
+    memory { params.ms2rescore_mem }
 
     container { ms2rescore_image }
     containerOptions { "-v /mnt/data/projects/pipeline-of-identification/bin/ms2pip-model:/mnt/data/ms2pip-model" }

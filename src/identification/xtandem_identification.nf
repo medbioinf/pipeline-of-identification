@@ -5,6 +5,7 @@ python_image = 'medbioinf/ident-comparison-python'
 
 // number of threads used by xtandem
 params.xtandem_threads = 16
+params.xtandem_mem = "120 GB"
 
 include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
 include {target_decoy_approach} from workflow.projectDir + '/src/postprocessing/default_target_decoy_approach.nf'
@@ -16,14 +17,14 @@ include {ms2rescore_workflow} from workflow.projectDir + '/src/postprocessing/ms
  */
 workflow xtandem_identification {
     take:
-        sdrf
+        xtandem_config_file
         fasta
         mzmls
-        max_missed_cleavages
-        max_parent_charge
+        precursor_tol_ppm
+        fragment_tol_da
 
     main:
-        (xtandem_param_files, taxonomy_file) = create_xtandem_params_files_from_sdrf(sdrf, fasta, max_missed_cleavages, max_parent_charge)
+        (xtandem_param_files, taxonomy_file) = create_xtandem_params_files_from_default(xtandem_config_file, fasta, mzmls, precursor_tol_ppm, fragment_tol_da)
         xtandem_param_files = xtandem_param_files.flatten()
 
         tandem_xmls = identification_with_xtandem(xtandem_param_files, taxonomy_file, fasta, mzmls.collect())
@@ -37,7 +38,7 @@ workflow xtandem_identification {
 
         pout_files = psm_percolator(pin_files)
 
-        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.drop('xtandem_identification_'.length()).take(it.name.lastIndexOf('.t.xml') - 'xtandem_identification_'.length()) ] }
+        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.xtandem_identification')) + '.mzML'  ] }
         ms2rescore_results = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), 'xtandem')
         mokapot_results = ms2rescore_results[0]
         mokapot_features = ms2rescore_results[1]
@@ -54,37 +55,63 @@ workflow xtandem_identification {
 
 
 /**
- * Creates a X!TAndem params XML file for each RAW file ionthe SDRF file, together with one taxonomy XML file
- * @param sdrf The SDRF file
+ * Creates a X!Tandem params file from the given default file for the mzML files
+ * @param xtandem_config_file The default config file
  * @param sdrf The FASTA file
  * @param max_missed_clavages maximum number of missed cleavages
  * @param max_parent_charge  maximum parent charge
 
  * @return The XTandem params for each file in the SDRF and the according taxonomy file
  */
-process create_xtandem_params_files_from_sdrf {
+process create_xtandem_params_files_from_default {
+    cpus 2
+    memory "1 GB"
     container { python_image }
 
     input:
-    path sdrf
+    path xtandem_config_file
     path fasta
-    val max_missed_clavages
-    val max_parent_charge
+    path mzmls
+    val precursor_tol_ppm
+    val fragment_tol_da
 
     output:
-    path "*.tandem_input.xml"
-    path "sdrf_convert_taxonomy.xml"
+    path "*.xtandem_input.xml"
+    path "xtandem_taxonomy.xml"
 
     """
-    python -m sdrf_convert $sdrf tandem --fasta $fasta --max-missed-cleavages $max_missed_clavages --max-parent-charge $max_parent_charge --max-threads $params.xtandem_threads
-    
+    # write the taxonomy file
+    echo '<?xml version="1.0"?>
+<bioml label="x! taxon-to-file matching list">
+  <taxon label="sample_species">
+    <file format="peptide" URL="${fasta}" />
+  </taxon>
+</bioml>' > xtandem_taxonomy.xml
+
+    # adjust parameters in the default file
+    cp ${xtandem_config_file} ${mzmls.baseName}.xtandem_input.xml
+
+    sed -i 's;<note type="input" label="list path, taxonomy information">[^<]*</note>;<note type="input" label="list path, taxonomy information">xtandem_taxonomy.xml</note>;' ${mzmls.baseName}.xtandem_input.xml
+
+    sed -i 's;<note type="input" label="spectrum, path">[^<]*</note>;<note type="input" label="spectrum, path">${mzmls}</note>;' ${mzmls.baseName}.xtandem_input.xml
+    sed -i 's;<note type="input" label="output, path">[^<]*</note>;<note type="input" label="output, path">${mzmls.baseName}.xtandem_identification.t.xml</note>;' ${mzmls.baseName}.xtandem_input.xml
+
+    sed -i 's;<note type="input" label="spectrum, fragment monoisotopic mass error">[^<]*</note>;<note type="input" label="spectrum, fragment monoisotopic mass error">${fragment_tol_da}</note>;' ${mzmls.baseName}.xtandem_input.xml
+    sed -i 's;<note type="input" label="spectrum, fragment monoisotopic mass error units">[^<]*</note>;<note type="input" label="spectrum, fragment monoisotopic mass error units">Daltons</note>;' ${mzmls.baseName}.xtandem_input.xml
+
+    sed -i 's;<note type="input" label="spectrum, parent monoisotopic mass error minus">[^<]*</note>;<note type="input" label="spectrum, parent monoisotopic mass error minus">${precursor_tol_ppm}</note>;' ${mzmls.baseName}.xtandem_input.xml
+    sed -i 's;<note type="input" label="spectrum, parent monoisotopic mass error plus">[^<]*</note>;<note type="input" label="spectrum, parent monoisotopic mass error plus">${precursor_tol_ppm}</note>;' ${mzmls.baseName}.xtandem_input.xml
+    sed -i 's;<note type="input" label="spectrum, parent monoisotopic mass error units">[^<]*</note>;<note type="input" label="spectrum, parent monoisotopic mass error units">ppm</note>;' ${mzmls.baseName}.xtandem_input.xml
+
+    sed -i 's;<note type="input" label="spectrum, threads">[^<]*</note>;<note type="input" label="spectrum, threads">${params.xtandem_threads}</note>;' ${mzmls.baseName}.xtandem_input.xml
+
     # rename absolute paths to current path, to allow for clean passing on in workflow
     workDir=\$(pwd)
-    for file in *.tandem_input.xml; do
+    for file in *.xtandem_input.xml; do
         sed -i "s;\$workDir/;;g" \$file
     done
 
-    #sed -i "s;\$workDir/;;g" sdrf_convert_taxonomy.xml
+    #sed -i "s;\$workDir/;;g" xtandem_taxonomy.xml
     """
 }
 
@@ -94,6 +121,7 @@ process create_xtandem_params_files_from_sdrf {
  */
 process identification_with_xtandem {
     cpus { params.xtandem_threads }
+    memory { params.xtandem_mem }
     container { xtandem_image }
 
     input:
