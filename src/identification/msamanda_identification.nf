@@ -1,66 +1,64 @@
 nextflow.enable.dsl=2
 
-msamanda_image = 'quay.io/medbioinf/msamanda:3.0.22.071'
+params.msamanda_image = 'quay.io/medbioinf/msamanda:3.0.22.071'
 
 // number of threads used by msamanda
 params.msamanda_threads = 16
 params.msamanda_mem = "40 GB"
 
-include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
-include {target_decoy_approach} from workflow.projectDir + '/src/postprocessing/default_target_decoy_approach.nf'
-include {psm_percolator} from workflow.projectDir + '/src/postprocessing/percolator.nf'
-include {ms2rescore_workflow} from workflow.projectDir + '/src/postprocessing/ms2rescore.nf'
+include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
+include {target_decoy_approach} from '../postprocessing/default_target_decoy_approach.nf'
+include {psm_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
+include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
 
 /**
- * Executes the identification using Sage
- *
- * @return tuples containing the Sage results as [pin, tsv] files for each mzML
+ * Executes the identification using MSAmanda
  */
 workflow msamanda_identification {
     take:
-        msamanda_config_file
-        fasta
-        mzmls
-        precursor_tol_ppm
-        fragment_tol_da
+    msamanda_config_file
+    fasta
+    mzmls
+    precursor_tol_ppm
+    fragment_tol_da
 
     main:
-        msamanda_results = identification_with_msamanda(msamanda_config_file, fasta, mzmls, precursor_tol_ppm, fragment_tol_da)
+    msamanda_results = identification_with_msamanda(msamanda_config_file, fasta, mzmls, precursor_tol_ppm, fragment_tol_da)
 
-        // transpose to tuples containing [pin, tsv] files for each mzML 
-        return_files = msamanda_results.msamanda_pin.collect()
-            .concat(msamanda_results.msamanda_mzid.collect())
-            .toList()
-            .transpose()
-        
-        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(msamanda_results.msamanda_mzid, 'mzid', 'msamanda')
-        psm_tsvs = psm_tsvs_and_pin[0]
-        pin_files = psm_tsvs_and_pin[1]
+    // transpose to tuples containing [pin, tsv] files for each mzML 
+    return_files = msamanda_results.msamanda_pin.collect()
+        .concat(msamanda_results.msamanda_mzid.collect())
+        .toList()
+        .transpose()
+    
+    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(msamanda_results.msamanda_mzid, 'mzid', 'msamanda')
+    psm_tsvs = psm_tsvs_and_pin.psm_tsv
+    pin_files = psm_tsvs_and_pin.pin_file
 
-        tda_results = target_decoy_approach(psm_tsvs, 'msamanda')
+    tda_results = target_decoy_approach(psm_tsvs, 'msamanda')
 
-        pout_files = psm_percolator(pin_files)
+    pout_files = psm_percolator(pin_files)
 
-        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_output.mzid')) + '.mzML'  ] }
-        ms2rescore_results = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), 'msamanda')
-        mokapot_results = ms2rescore_results[0]
-        mokapot_features = ms2rescore_results[1]
+    psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_output.mzid')) + '.mzML'  ] }
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), 'msamanda')
 
-    emit:
-        return_files
-        psm_tsvs
-        tda_results
-        pin_files
-        pout_files
-        mokapot_results
-        mokapot_features
+    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins)
+
+    publish:
+    return_files >> 'msamanda'
+    psm_tsvs >> 'msamanda'
+    tda_results >> 'msamanda'
+    pin_files >> 'msamanda'
+    pout_files >> 'msamanda'
+    ms2rescore_pins >> 'msamanda'
+    ms2rescore_percolator_results >> 'msamanda'
 }
 
 
 process identification_with_msamanda {
     cpus { params.msamanda_threads }
     memory { params.msamanda_mem }
-    container { msamanda_image }
+    container { params.msamanda_image }
 
     input:
     path msamanda_config_file
@@ -73,6 +71,7 @@ process identification_with_msamanda {
     path "*.mzid_pin.tsv", emit: msamanda_pin
     path "*.mzid", emit: msamanda_mzid
 
+    script:
     """
     cp ${msamanda_config_file} adjusted_msamanda_settings.xml
     sed -i 's;<MS1Tol[^<]*</MS1Tol>;<MS1Tol Unit="ppm">${precursor_tol_ppm}</MS1Tol>;' adjusted_msamanda_settings.xml

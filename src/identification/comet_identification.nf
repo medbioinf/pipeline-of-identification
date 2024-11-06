@@ -1,62 +1,61 @@
 nextflow.enable.dsl=2
 
-comet_image = 'quay.io/medbioinf/comet-ms:v2024.01.0'
-python_image = 'medbioinf/ident-comparison-python'
+params.comet_image = 'quay.io/medbioinf/comet-ms:v2024.01.0'
 
 // number of threads used by comet
 params.comet_threads = 16
 params.comet_mem = "8 GB"
 
-include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
-include {target_decoy_approach} from workflow.projectDir + '/src/postprocessing/default_target_decoy_approach.nf'
-include {psm_percolator} from workflow.projectDir + '/src/postprocessing/percolator.nf'
-include {ms2rescore_workflow} from workflow.projectDir + '/src/postprocessing/ms2rescore.nf'
+include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
+include {target_decoy_approach} from '../postprocessing/default_target_decoy_approach.nf'
+include {psm_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
+include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
 
 /**
  * Exports the identification using Comet configured by a SDRF files
  */
 workflow comet_identification {
     take:
-        default_params_file
-        fasta
-        mzmls
-        precursor_tol_ppm
-        fragment_tol_da
+    default_params_file
+    fasta
+    mzmls
+    precursor_tol_ppm
+    fragment_tol_da
 
     main:
-        comet_params_file = adjust_comet_param_file(default_params_file, precursor_tol_ppm, fragment_tol_da)
-        
-        comet_mzids = identification_with_comet(fasta, mzmls, comet_params_file)
-        comet_mzids = comet_mzids.flatten()
-        
-        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(comet_mzids, 'mzid', 'comet')
-        psm_tsvs = psm_tsvs_and_pin[0]
-        pin_files = psm_tsvs_and_pin[1]
+    comet_params_file = adjust_comet_param_file(default_params_file, precursor_tol_ppm, fragment_tol_da)
+    
+    comet_mzids = identification_with_comet(fasta, mzmls, comet_params_file)
+    comet_mzids = comet_mzids.flatten()
+    
+    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(comet_mzids, 'mzid', 'comet')
+    psm_tsvs = psm_tsvs_and_pin.psm_tsv
+    pin_files = psm_tsvs_and_pin.pin_file
 
-        tda_results = target_decoy_approach(psm_tsvs, 'comet')
+    tda_results = target_decoy_approach(psm_tsvs, 'comet')
 
-        pout_files = psm_percolator(pin_files)
+    pout_files = psm_percolator(pin_files)
 
-        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
-        ms2rescore_results = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), 'comet')
-        mokapot_results = ms2rescore_results[0]
-        mokapot_features = ms2rescore_results[1]
+    psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), 'comet')
 
-    emit:
-        comet_mzids
-        psm_tsvs
-        tda_results
-        pin_files
-        pout_files
-        mokapot_results
-        mokapot_features
+    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins)
+
+    publish:
+    comet_mzids >> 'comet'
+    psm_tsvs >> 'comet'
+    tda_results >> 'comet'
+    pin_files >> 'comet'
+    pout_files >> 'comet'
+    ms2rescore_pins >> 'comet'
+    ms2rescore_percolator_results >> 'comet'
 }
 
 
 process adjust_comet_param_file {
     cpus 2
     memory "1 GB"
-    container { python_image }
+    container { params.python_image }
 
     input:
     path comet_params_file
@@ -66,6 +65,7 @@ process adjust_comet_param_file {
     output:
     path "adjusted_comet.params"
 
+    script:
     """
     cp ${comet_params_file} adjusted_comet.params
     
@@ -91,7 +91,7 @@ process adjust_comet_param_file {
 process identification_with_comet {
     cpus { params.comet_threads }
     memory { params.comet_mem }
-    container { comet_image }
+    container { params.comet_image }
 
     input:
     path fasta
@@ -101,6 +101,7 @@ process identification_with_comet {
     output:
     path "*.mzid"
 
+    script:
     """
     comet -P${comet_param_file} -D${fasta} ${mzmls}
     """

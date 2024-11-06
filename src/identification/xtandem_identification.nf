@@ -1,58 +1,56 @@
 nextflow.enable.dsl=2
 
-xtandem_image = 'quay.io/medbioinf/xtandem:2017.2.1.4'
-python_image = 'medbioinf/ident-comparison-python'
+params.xtandem_image = 'quay.io/medbioinf/xtandem:2017.2.1.4'
 
 // number of threads used by xtandem
 params.xtandem_threads = 16
 params.xtandem_mem = "120 GB"
 
-include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
-include {target_decoy_approach} from workflow.projectDir + '/src/postprocessing/default_target_decoy_approach.nf'
-include {psm_percolator} from workflow.projectDir + '/src/postprocessing/percolator.nf'
-include {ms2rescore_workflow} from workflow.projectDir + '/src/postprocessing/ms2rescore.nf'
+include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
+include {target_decoy_approach} from '../postprocessing/default_target_decoy_approach.nf'
+include {psm_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
+include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
 
 /**
  * Exports the identification using Comet configured by a SDRF files
  */
 workflow xtandem_identification {
     take:
-        xtandem_config_file
-        fasta
-        mzmls
-        precursor_tol_ppm
-        fragment_tol_da
+    xtandem_config_file
+    fasta
+    mzmls
+    precursor_tol_ppm
+    fragment_tol_da
 
     main:
-        (xtandem_param_files, taxonomy_file) = create_xtandem_params_files_from_default(xtandem_config_file, fasta, mzmls, precursor_tol_ppm, fragment_tol_da)
-        xtandem_param_files = xtandem_param_files.flatten()
+    (xtandem_param_files, taxonomy_file) = create_xtandem_params_files_from_default(xtandem_config_file, fasta, mzmls, precursor_tol_ppm, fragment_tol_da)
+    xtandem_param_files = xtandem_param_files.flatten()
 
-        tandem_xmls = identification_with_xtandem(xtandem_param_files, taxonomy_file, fasta, mzmls.collect())
-        tandem_xmls = tandem_xmls.flatten()
+    tandem_xmls = identification_with_xtandem(xtandem_param_files, taxonomy_file, fasta, mzmls.collect())
+    tandem_xmls = tandem_xmls.flatten()
 
-        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(tandem_xmls, 'xtandem', 'xtandem')
-        psm_tsvs = psm_tsvs_and_pin[0]
-        pin_files = psm_tsvs_and_pin[1]
+    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(tandem_xmls, 'xtandem', 'xtandem')
+    psm_tsvs = psm_tsvs_and_pin.psm_tsv
+    pin_files = psm_tsvs_and_pin.pin_file
 
-        tda_results = target_decoy_approach(psm_tsvs, 'xtandem')
+    tda_results = target_decoy_approach(psm_tsvs, 'xtandem')
 
-        pout_files = psm_percolator(pin_files)
+    pout_files = psm_percolator(pin_files)
 
-        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.xtandem_identification')) + '.mzML'  ] }
-        ms2rescore_results = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), 'xtandem')
-        mokapot_results = ms2rescore_results[0]
-        mokapot_features = ms2rescore_results[1]
+    psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.xtandem_identification')) + '.mzML'  ] }
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), 'xtandem')
     
-    emit:
-        tandem_xmls
-        psm_tsvs
-        tda_results
-        pin_files
-        pout_files
-        mokapot_results
-        mokapot_features
+    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins)
+    
+    publish:
+    tandem_xmls >> 'xtandem'
+    psm_tsvs >> 'xtandem'
+    tda_results >> 'xtandem'
+    pin_files >> 'xtandem'
+    pout_files >> 'xtandem'
+    ms2rescore_pins >> 'xtandem'
+    ms2rescore_percolator_results >> 'xtandem'
 }
-
 
 /**
  * Creates a X!Tandem params file from the given default file for the mzML files
@@ -66,7 +64,7 @@ workflow xtandem_identification {
 process create_xtandem_params_files_from_default {
     cpus 2
     memory "1 GB"
-    container { python_image }
+    container { params.python_image }
 
     input:
     path xtandem_config_file
@@ -79,6 +77,7 @@ process create_xtandem_params_files_from_default {
     path "*.xtandem_input.xml"
     path "xtandem_taxonomy.xml"
 
+    script:
     """
     # write the taxonomy file
     echo '<?xml version="1.0"?>
@@ -115,14 +114,13 @@ process create_xtandem_params_files_from_default {
     """
 }
 
-
 /**
  * Performs the identifications with XTandem
  */
 process identification_with_xtandem {
     cpus { params.xtandem_threads }
     memory { params.xtandem_mem }
-    container { xtandem_image }
+    container { params.xtandem_image }
 
     input:
     path xtandem_param_file
@@ -133,6 +131,7 @@ process identification_with_xtandem {
     output:
     path "*.t.xml"
 
+    script:
     """
     tandem $xtandem_param_file
     """

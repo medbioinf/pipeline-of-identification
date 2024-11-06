@@ -1,6 +1,6 @@
 nextflow.enable.dsl=2
 
-percolator_image = 'quay.io/medbioinf/percolator:3.6.5'
+params.percolator_image = 'quay.io/medbioinf/percolator:3.6.5'
 
 // number of threads used by percolator
 params.percolator_threads = 4
@@ -13,20 +13,20 @@ params.percolator_mem = "4 GB"
  */
 workflow psm_percolator {
     take:
-        pin_files
+    pin_files
 
     main:
-        pout_files = run_percolator(pin_files)
+    pout_files = run_percolator(pin_files)
 
     emit:
-        pout_files
+    pout_files
 }
 
 
 process run_percolator {
     cpus  { params.percolator_threads }
     memory { params.percolator_mem }
-    container { percolator_image }
+    container { params.percolator_image }
 
     input:
     path pin_file
@@ -34,6 +34,7 @@ process run_percolator {
     output:
     path "${pin_file.baseName}.pout"
 
+    script:
     """
     percolator --num-threads ${params.percolator_threads} --only-psms --results-psms ${pin_file.baseName}.pout ${pin_file} 
     """

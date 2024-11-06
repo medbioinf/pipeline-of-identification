@@ -1,6 +1,6 @@
 nextflow.enable.dsl=2
 
-python_image = 'medbioinf/ident-comparison-python'
+params.convert_psm_tsv_mem = "60 GB"
 
 /**
  * Executes postprocessing steps to enhance the psm_utils TSV and prepare the PIN files
@@ -9,17 +9,17 @@ python_image = 'medbioinf/ident-comparison-python'
  */
 workflow convert_and_enhance_psm_tsv {
     take:
-        searchengine_results
-        type
-        searchengine
+    searchengine_results
+    type
+    searchengine
 
     main:
-        psm_utils_tsvs = convert_searchengine_to_psm_utils(searchengine_results, type)
-        enhance_psms_and_create_pin = enhance_psms_and_create_pin(psm_utils_tsvs, searchengine)
+    psm_utils_tsvs = convert_searchengine_to_psm_utils(searchengine_results, type)
+    enhance_psms_and_create_pin = enhance_psms_and_create_pin(psm_utils_tsvs, searchengine)
 
     emit:
-        enhance_psms_and_create_pin.psm_tsv
-        enhance_psms_and_create_pin.pin_file
+    psm_tsv = enhance_psms_and_create_pin.psm_tsv
+    pin_file = enhance_psms_and_create_pin.pin_file
 }
 
 /**
@@ -27,17 +27,17 @@ workflow convert_and_enhance_psm_tsv {
  */
 process convert_searchengine_to_psm_utils {
     cpus 2
-    memory '60 GB'
-    container { python_image }
+    memory { params.convert_psm_tsv_mem }
+    container { params.python_image }
 
     input:
     path searchengine_results
     val type
 
-
     output:
     path "*.psm_utils.tsv"
 
+    script:
     """
     convert_to_psm_utils.py -in_file ${searchengine_results} -out_file ${searchengine_results}.psm_utils.tsv -in_type ${type}
     """ 
@@ -52,8 +52,8 @@ process convert_searchengine_to_psm_utils {
  */
 process enhance_psms_and_create_pin {
     cpus 2
-    memory '8 GB'
-    container { python_image }
+    memory "8 GB"
+    container { params.python_image }
 
     input:
     path psm_utils_tsv
@@ -63,6 +63,7 @@ process enhance_psms_and_create_pin {
     path "${psm_utils_tsv.baseName}.enhanced.tsv", emit: psm_tsv
     path "${psm_utils_tsv.baseName}.pin", emit: pin_file
 
+    script:
     """
     adjust_psm_list.py -in_file ${psm_utils_tsv} -out_file ${psm_utils_tsv.baseName}.adjusted.tsv -searchengine ${searchengine}
     psms_to_pin_and_enhancedTSV.py -in_file ${psm_utils_tsv.baseName}.adjusted.tsv -out_file ${psm_utils_tsv.baseName}.enhanced.tsv -out_pin  ${psm_utils_tsv.baseName}.pre.pin -searchengine ${searchengine}
