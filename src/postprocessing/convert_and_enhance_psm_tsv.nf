@@ -1,6 +1,7 @@
 nextflow.enable.dsl=2
 
 params.convert_psm_tsv_mem = "60 GB"
+params.enhance_psm_tsv_mem = "8 GB"
 
 /**
  * Executes postprocessing steps to enhance the psm_utils TSV and prepare the PIN files
@@ -16,10 +17,12 @@ workflow convert_and_enhance_psm_tsv {
     main:
     psm_utils_tsvs = convert_searchengine_to_psm_utils(searchengine_results, type)
     enhance_psms_and_create_pin = enhance_psms_and_create_pin(psm_utils_tsvs, searchengine)
+    onlybest_pin_file = filter_pin_keep_only_best(enhance_psms_and_create_pin.pin_file, searchengine)
 
     emit:
     psm_tsv = enhance_psms_and_create_pin.psm_tsv
     pin_file = enhance_psms_and_create_pin.pin_file
+    onlybest_pin_file
 }
 
 /**
@@ -52,7 +55,7 @@ process convert_searchengine_to_psm_utils {
  */
 process enhance_psms_and_create_pin {
     cpus 2
-    memory "8 GB"
+    memory { params.enhance_psm_tsv_mem }
     container { params.python_image }
 
     input:
@@ -69,6 +72,25 @@ process enhance_psms_and_create_pin {
     psms_to_pin_and_enhancedTSV.py -in_file ${psm_utils_tsv.baseName}.adjusted.tsv -out_file ${psm_utils_tsv.baseName}.enhanced.tsv -out_pin  ${psm_utils_tsv.baseName}.pre.pin -searchengine ${searchengine}
 
     # correct the PIN file by moving the scan number to third column and adding correct SpecId (increasing integer)
-    awk '{FS="\t";OFS="\t"; if (NR>1) { \$3=\$1; \$1=NR-1; gsub(".*scan=", "", \$3)  } print}' ${psm_utils_tsv.baseName}.pre.pin > ${psm_utils_tsv.baseName}.pin
+    awk '{FS="\t";OFS="\t"; if (NR>1) { \$3=\$1; \$1=NR-1; gsub(".*=", "", \$3) } print}' ${psm_utils_tsv.baseName}.pre.pin > ${psm_utils_tsv.baseName}.pin
+    """
+}
+
+
+process filter_pin_keep_only_best {
+    cpus 2
+    memory { params.enhance_psm_tsv_mem }
+    container { params.python_image }
+
+    input:
+    path pin_files
+    val searchengine
+
+    output:
+    path "${pin_files.baseName}.onlybest.pin"
+
+    script:
+    """
+    filter_pin_keep_best_per_spectrum.py -in_file ${pin_files} -out_pin ${pin_files.baseName}.onlybest.pin -searchengine ${searchengine}
     """
 }

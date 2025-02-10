@@ -6,9 +6,12 @@ params.xtandem_image = 'quay.io/medbioinf/xtandem:2017.2.1.4'
 params.xtandem_threads = 16
 params.xtandem_mem = "120 GB"
 
+params.xtandem_psm_id_pattern = "(.*)"
+params.xtandem_spectrum_id_pattern = '(.*)'
+
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
 include {target_decoy_approach} from '../postprocessing/default_target_decoy_approach.nf'
-include {psm_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
+include {psm_percolator; psm_percolator as onlybest_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
 
 /**
@@ -32,22 +35,27 @@ workflow xtandem_identification {
     psm_tsvs_and_pin = convert_and_enhance_psm_tsv(tandem_xmls, 'xtandem', 'xtandem')
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
+    onlybest_pin_files = psm_tsvs_and_pin.onlybest_pin_file
 
     tda_results = target_decoy_approach(psm_tsvs, 'xtandem')
 
     pout_files = psm_percolator(pin_files)
+    onlybest_pout_files = onlybest_percolator(onlybest_pin_files)
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.xtandem_identification')) + '.mzML'  ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), 'xtandem')
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.xtandem_psm_id_pattern, params.xtandem_spectrum_id_pattern, '^DECOY_', 'xtandem')
     
-    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins)
+    // perform percolation on MS2Rescore results (both all and onlybest)
+    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins.concat(ms2rescore_pins.ms2rescore_onlybest_base_pins))
     
     publish:
     tandem_xmls >> 'xtandem'
     psm_tsvs >> 'xtandem'
     tda_results >> 'xtandem'
     pin_files >> 'xtandem'
+    onlybest_pin_files >> 'xtandem'
     pout_files >> 'xtandem'
+    onlybest_pout_files >> 'xtandem'
     ms2rescore_pins >> 'xtandem'
     ms2rescore_percolator_results >> 'xtandem'
 }

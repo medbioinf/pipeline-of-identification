@@ -1,5 +1,7 @@
 nextflow.enable.dsl=2
 
+params.tda_mem = "8 GB"
+
 /**
  * This workflow uses the (enhanced) psm_utils TSV files as input and calculates the FDR q-values using the "default" TDA approach.
  */
@@ -21,8 +23,7 @@ workflow target_decoy_approach {
  */
 process calculate_qvalues_filter_psms_and_record_df {
     cpus 2
-    memory '8GB'
-
+    memory { params.tda_mem }
     container { params.python_image }
 
     input:

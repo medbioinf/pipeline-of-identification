@@ -2,25 +2,32 @@ nextflow.enable.dsl=2
 
 params.ms2rescore_image = 'medbioinf/ident-comparison-ms2rescore'
 
-// number of threads used by ms2rescore
+// parameters for ms2rescore
 params.ms2rescore_threads = 4
 params.ms2rescore_mem = "64 GB"
-
 params.ms2rescore_model = "HCD"
+
+// include filtering from convert_and_enhance_psm_tsv.nf
+include {filter_pin_keep_only_best} from './convert_and_enhance_psm_tsv.nf'
 
 workflow ms2rescore_workflow {
     take:
     psm_tsvs_and_mzmls
     psm_tsvs
     mzmls
+    psm_id_pattern
+    spectrum_id_pattern
+    id_decoy_pattern
     searchengine
 
     main:
-    ms2rescore_pre_pins = run_ms2rescore(psm_tsvs_and_mzmls, psm_tsvs, mzmls, searchengine, params.fragment_tol_da)
+    ms2rescore_pre_pins = run_ms2rescore(psm_tsvs_and_mzmls, psm_tsvs, mzmls, psm_id_pattern, spectrum_id_pattern, id_decoy_pattern, params.fragment_tol_da)
     ms2rescore_pins = correct_psm_utils_pins(ms2rescore_pre_pins)
+    ms2rescore_onlybest_base_pins = filter_pin_keep_only_best(ms2rescore_pins, searchengine)
 
     emit:
     ms2rescore_pins
+    ms2rescore_onlybest_base_pins
 }
 
 
@@ -35,7 +42,9 @@ process run_ms2rescore {
     tuple val(psm_utils_tsvs), val(mzml_for_psms)
     path psm_tsvs
     path mzmls
-    val searchengine
+    val psm_id_pattern
+    val spectrum_id_pattern
+    val id_decoy_pattern
     val fragment_tol_da
 
     output:
@@ -44,23 +53,17 @@ process run_ms2rescore {
     script:
     """
     # write the toml file...
-    echo '[ms2rescore]
-psm_file = "${psm_utils_tsvs}"
-psm_file_type = "tsv"
-spectrum_path = "${mzml_for_psms}"
+    echo "[ms2rescore]
+psm_file = '${psm_utils_tsvs}'
+psm_file_type = 'tsv'
+spectrum_path = '${mzml_for_psms}'
 
-psm_id_pattern = "(.*)"                 # scan/spectrum id in PSM file' > ms2rescore-config.toml
-
-
-    if [ "${searchengine}" == "comet" ] || [ "${searchengine}" == "maxquant" ]; then
-        echo "spectrum_id_pattern = '.*scan=(\\d+)\$'   # scan/spectrum id in mzML, Single quotes for literal regex string" >> ms2rescore-config.toml
-    else
-        echo "spectrum_id_pattern = '(.*)'   # scan/spectrum id in mzML, Single quotes for literal regex string" >> ms2rescore-config.toml
-    fi
+psm_id_pattern = '${psm_id_pattern}'             # scan/spectrum id in PSM file
+spectrum_id_pattern = '${spectrum_id_pattern}'   # scan/spectrum id in mzML, Single quotes for literal regex string" > ms2rescore-config.toml
 
     # don't use DECOY_ prefix for MaxQuant, but all other searchengines
-    if [ "${searchengine}" != "maxquant" ]; then
-        echo "id_decoy_pattern = '^DECOY_'" >> ms2rescore-config.toml
+    if [ "" != "${id_decoy_pattern}" ]; then
+        echo "id_decoy_pattern = '${id_decoy_pattern}'" >> ms2rescore-config.toml
     fi
 
     echo 'lower_score_is_better = false
@@ -100,6 +103,6 @@ process correct_psm_utils_pins {
     script:
     """
     # correct the PIN file by moving the scan number to third column and adding correct SpecId (increasing integer)
-    awk '{FS="\t";OFS="\t"; if (NR>1) { \$3=\$1; \$1=NR-1; gsub(".*scan=", "", \$3)  } print}' ${psm_utils_pins} > ${psm_utils_pins.baseName}.corrected.pin
+    awk '{FS="\t";OFS="\t"; if (NR>1) { \$3=\$1; \$1=NR-1; gsub(".*=", "", \$3)  } print}' ${psm_utils_pins} > ${psm_utils_pins.baseName}.corrected.pin
     """
 }
