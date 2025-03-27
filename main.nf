@@ -6,10 +6,16 @@ nextflow.preview.output = true
 params.python_image = 'medbioinf/ident-comparison-python'
 
 // parameters set by the command line
-params.mzml_files = '*.mzML'    // may contain globs
-params.fasta = 'sprot.fasta'    // single file
+params.raw_files = ''
+params.mzml_files = ''    // may contain globs
+params.fasta = ''
+params.fasta_target_decoy = ''
 params.precursor_tol_ppm = 10
 params.fragment_tol_da = 0.02
+params.is_timstof = false
+
+// keep the (converted) mzML files
+params.keep_mzmls = true
 
 // should the search engines be executed?
 params.execute_comet = true
@@ -29,6 +35,7 @@ params.xtandem_config_file = "${baseDir}/config/xtandem_input.xml"
 
 // including modules
 include {create_decoy_database} from "./src/preprocess/create_decoy_database.nf"
+include {convert_to_mzml} from "./src/preprocess/convert_to_mzml.nf"
 
 include {comet_identification} from "./src/identification/comet_identification.nf"
 include {maxquant_identification} from "./src/identification/maxquant_identification.nf"
@@ -37,20 +44,76 @@ include {msgfplus_identification} from "./src/identification/msgfplus_identifica
 include {sage_identification} from "./src/identification/sage_identification.nf"
 include {xtandem_identification} from "./src/identification/xtandem_identification.nf"
 
-
 workflow {
     main:
-    mzmls = Channel.fromPath(params.mzml_files).flatten()
-    target_fasta = Channel.fromPath(params.fasta).first()
-
-    // create the target-decoy-DB
-    target_decoy_fasta = create_decoy_database(target_fasta, "reverse")
+    // TODO NOW:
+    // - give raw/.d and perform mzML conversion, if no mzMLs are given
 
     // TODO: checken, welche params sich in "high res / low res" unterscheiden
     // - auf jeden fall comet
     // - msgf+ auch das modell
 
     // TODO: add PTM definitions
+
+
+    if (params.is_timstof && !params.raw_files) {
+        error("TimsTOF data needs raw files specified!")
+    }
+
+    if (!params.raw_files && !params.mzml_files) {
+        error("neither raw file/path, nor mzML files given, please provide at least one")
+    }
+
+    if (!params.fasta) {
+        error("need to state a FASTA file for identification")
+    }
+
+    if (params.mzml_files) {
+        mzmls = Channel.fromPath(params.mzml_files).flatten()
+        mzmls_info = mzmls
+    } else {
+        mzmls_info = "no mzML given"
+    }
+
+    if (params.raw_files) {
+        raw_files = Channel.fromPath(params.raw_files).flatten()
+        raw_files_info = raw_files
+    } else {
+        raw_files_info = "no raw spectra given"
+    }
+
+    target_fasta = Channel.fromPath(params.fasta).first()
+
+    // color-codes for output: https://github.com/nextflow-io/nf-schema/blob/ecf159f53d45200ef70920c03e75077b5689a386/plugins/nf-schema/src/main/nextflow/validation/Utils.groovy#L222
+    log.info "\033[1;32m" + "Pipeline of Identification" + "\033[0;32m" + """\
+
+    raw files:  ${raw_files_info}
+    mzML files: ${mzmls_info}
+    target FASTA: ${target_fasta}
+    target decoy FASTA: ${params.target_decoy_fasta}
+    precursor tolerance (ppm): ${params.precursor_tol_ppm}
+    fragment tolerance (Da): ${params.fragment_tol_da}
+    timsTOF data: ${params.is_timstof}
+    Comet:     ${params.execute_comet}
+    MaxQuant:  ${params.execute_maxquant}
+    MS Amanda: ${params.execute_msamanda}
+    MS-GF+:    ${params.execute_msgfplus}
+    Sage:      ${params.execute_sage}
+    X!Tandem:  ${params.execute_xtandem}
+""".stripIndent(true) + "\033[0m"
+
+    // TODO: convert raw files, if not given
+    if (!params.mzml_files) {
+        mzmls = convert_to_mzml(raw_files)
+    }
+
+    // create the target-decoy-DB, if not given
+    if (params.target_decoy_fasta) {
+        target_decoy_fasta = Channel.fromPath(params.target_decoy_fasta).first()
+    } else {
+        target_decoy_fasta = create_decoy_database(target_fasta, "reverse")
+    }
+
 
     // run the search engines with post-processing
     if (params.execute_comet) {
@@ -85,6 +148,11 @@ workflow {
 }
 
 output {
+    'mzmls' {
+        enabled params.keep_mzmls
+        path 'mzmls'
+    }
+
     'comet' {
         enabled params.execute_comet
         path 'comet'
