@@ -36,6 +36,6 @@ process run_percolator {
 
     script:
     """
-    percolator --num-threads ${params.percolator_threads} --only-psms --results-psms ${pin_file.baseName}.pout ${pin_file} 
+    percolator --num-threads ${params.percolator_threads} --only-psms --post-processing-tdc --search-input concatenated --results-psms ${pin_file.baseName}.pout ${pin_file} 
     """
 }
