@@ -1,7 +1,5 @@
 nextflow.enable.dsl=2
 
-params.ms2rescore_image = 'medbioinf/ident-comparison-ms2rescore'
-
 // parameters for ms2rescore
 params.ms2rescore_threads = 4
 params.ms2rescore_mem = "64 GB"
@@ -21,7 +19,7 @@ workflow ms2rescore_workflow {
     searchengine
 
     main:
-    ms2rescore_pre_pins = run_ms2rescore(psm_tsvs_and_mzmls, psm_tsvs, mzmls, psm_id_pattern, spectrum_id_pattern, id_decoy_pattern, params.fragment_tol_da)
+    ms2rescore_pre_pins = run_ms2rescore(psm_tsvs_and_mzmls, psm_tsvs, mzmls, psm_id_pattern, spectrum_id_pattern, id_decoy_pattern, params.fragment_tol_da, params.is_timstof)
     ms2rescore_pins = correct_psm_utils_pins(ms2rescore_pre_pins)
     ms2rescore_onlybest_base_pins = filter_pin_keep_only_best(ms2rescore_pins, searchengine)
 
@@ -35,7 +33,7 @@ process run_ms2rescore {
     cpus  { params.ms2rescore_threads }
     memory { params.ms2rescore_mem }
 
-    container { params.ms2rescore_image }
+    container { params.python_image }
     containerOptions { "-v /mnt/data/projects/pipeline-of-identification/bin/ms2pip-model:/mnt/data/ms2pip-model" }
 
     input:
@@ -46,11 +44,17 @@ process run_ms2rescore {
     val spectrum_id_pattern
     val id_decoy_pattern
     val fragment_tol_da
-
+    val is_timstof
+    
     output:
     path "*.ms2rescore.pin", emit: features_file
-
+    
     script:
+    rescore_binary = "ms2rescore"
+    //if (is_timstof) {
+    //    rescore_binary = "tims2rescore"
+    //}
+
     """
     # write the toml file...
     echo "[ms2rescore]
@@ -79,11 +83,14 @@ ms2_tolerance = ${fragment_tol_da}
 processes = ${params.ms2rescore_threads}
 model_dir = "/mnt/data/ms2pip-model"
 
+[ms2rescore.feature_generators.deeplc]
+calibration_set_size = 0.15
+
 [ms2rescore.rescoring_engine]
 # empty, so no rescoring with percolator or mokapot is performed
 ' >> ms2rescore-config.toml
 
-    ms2rescore -c ms2rescore-config.toml
+    ${rescore_binary} -c ms2rescore-config.toml
     """
 }
 
