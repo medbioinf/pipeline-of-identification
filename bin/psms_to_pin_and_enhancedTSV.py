@@ -141,6 +141,7 @@ if __name__ == "__main__":
                         break
 
     # %%
+    psm_list.calculate_qvalues()
     write_file(psm_list, outfile, filetype="tsv")
 
     #%%
