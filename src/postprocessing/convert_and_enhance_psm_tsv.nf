@@ -16,6 +16,26 @@ workflow convert_and_enhance_psm_tsv {
 
     main:
     psm_utils_tsvs = convert_searchengine_to_psm_utils(searchengine_results, type)
+    enhanced_and_pins = enhance_psm_tsv(psm_utils_tsvs, searchengine)
+    
+    emit:
+    psm_tsv = enhanced_and_pins.psm_tsv
+    pin_file = enhanced_and_pins.pin_file
+    onlybest_pin_file = enhanced_and_pins.onlybest_pin_file
+}
+
+
+/**
+ * Executes postprocessing steps to enhance the psm_utils TSV and prepare the PIN files
+ *
+ * @return tuples containing the enhanced psm_utils TSVs and the corresponding PIN files
+ */
+workflow enhance_psm_tsv {
+    take:
+    psm_utils_tsvs
+    searchengine
+
+    main:
     enhance_psms_and_create_pin = enhance_psms_and_create_pin(psm_utils_tsvs, searchengine)
     onlybest_pin_file = filter_pin_keep_only_best(enhance_psms_and_create_pin.pin_file, searchengine)
 
@@ -39,6 +59,24 @@ process convert_searchengine_to_psm_utils {
 
     output:
     path "*.psm_utils.tsv"
+
+    script:
+    """
+    convert_to_psm_utils.py -in_file ${searchengine_results} -out_file ${searchengine_results}.psm_utils.tsv -in_type ${type}
+    """ 
+}
+
+process convert_chunked_result_to_psm_utils {
+    cpus 2
+    memory { params.convert_psm_tsv_mem }
+    container { params.python_image }
+
+    input:
+    tuple val(original_mzml_basename), path(searchengine_results)
+    val type
+
+    output:
+    tuple val(original_mzml_basename), path("${searchengine_results}.psm_utils.tsv")
 
     script:
     """

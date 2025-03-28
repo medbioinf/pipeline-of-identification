@@ -55,3 +55,40 @@ process convert_bruker_d {
     sed -i -e 's;<spectrum\\(.*\\) id="index=\\([0-9]*\\)\\(.*\\);<spectrum\\1 id="index=\\2 scan=\\2\\3;' ${input_raw.baseName}.mzML
     """
 }
+
+
+process split_mzml_into_chunks {
+    cpus 2
+    memory "8 GB"
+    container { params.msconvert_image }
+
+    input:
+    val chunksize
+    path mzml_file
+
+    output:
+    tuple val(mzml_file.baseName), path("${mzml_file.baseName}--*.mzML")
+
+    script:
+    """
+    CHUNKSIZE=${chunksize}
+
+    # get only MS2 spectra
+    wine msconvert --mzML --filter "msLevel 2-" "${mzml_file}" --outfile "${mzml_file.baseName}-MS2only.mzML"
+
+    # get the last spectrum 
+    MAX_INDEX=\$(tac ${mzml_file.baseName}-MS2only.mzML | grep -m1 "<spectrum.*index=" | sed 's;.*index="\\([0-9]*\\)".*;\\1;')
+    echo "max index: \${MAX_INDEX}"
+
+    for ((i=0; i<=MAX_INDEX; i+=CHUNKSIZE)); do
+        START_INDEX=\$i
+        END_INDEX=\$((i+CHUNKSIZE-1))
+        if ((END_INDEX > MAX_INDEX)); then
+            END_INDEX=\$MAX_INDEX
+        fi
+        echo "Processing spectra from index \${START_INDEX} to \${END_INDEX}"
+
+        wine msconvert --mzML --filter "index [\${START_INDEX},\${END_INDEX}]" "${mzml_file.baseName}-MS2only.mzML" --outfile "${mzml_file.baseName}--\${START_INDEX}_\${END_INDEX}.mzML"
+    done
+    """
+}
