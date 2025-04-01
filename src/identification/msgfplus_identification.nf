@@ -7,6 +7,8 @@ params.msgfplus_threads = 6
 params.msgfplus_mem_gb = 16
 params.msgfplus_tasks = 0
 
+params.msgfplus_instrument = "1" // 0: Low-res LCQ/LTQ, 1: Orbitrap/FTICR/Lumos, 2: TOF, 3: Q-Exactive
+
 params.msgfplus_split_input = 10000     // split input mzMLs into chunks of this size, 0 to disable
 
 params.msgfplus_psm_id_pattern = "(.*)"
@@ -49,7 +51,7 @@ workflow msgfplus_identification {
     if (params.msgfplus_split_input > 0) {
         merged_results = merge_psms(grouped_results)
     } else {
-        merged_results = psm_tsvs_with_mzml[1]
+        merged_results = psm_tsvs_with_mzml.map{ it -> it[1] }
     }
 
     psm_tsvs_and_pin = enhance_psm_tsv(merged_results, 'msgfplus')
@@ -98,7 +100,8 @@ process identification_with_msgfplus {
     script:
     """
     cp ${msgfplus_params_file} adjusted_MSGFPlus_Params.txt
-    sed -i 's;PrecursorMassTolerance=.*;PrecursorMassTolerance=${precursor_tol_ppm};' adjusted_MSGFPlus_Params.txt
+    sed -i 's;^PrecursorMassTolerance=.*;PrecursorMassTolerance=${precursor_tol_ppm};' adjusted_MSGFPlus_Params.txt
+    sed -i 's;^InstrumentID=.*;InstrumentID=${params.msgfplus_instrument};' adjusted_MSGFPlus_Params.txt
 
     java -Xmx${params.msgfplus_mem_gb}G -jar /opt/msgfplus/MSGFPlus.jar -conf adjusted_MSGFPlus_Params.txt -s ${mzml} -d ${fasta} -thread ${params.msgfplus_threads} -tasks ${params.msgfplus_tasks} -o ${mzml.baseName}.mzid
     """
