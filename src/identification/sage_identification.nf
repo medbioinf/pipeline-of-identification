@@ -10,7 +10,6 @@ params.sage_psm_id_pattern = "(.*)"
 params.sage_spectrum_id_pattern = '(.*)'
 
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
-include {target_decoy_approach} from '../postprocessing/default_target_decoy_approach.nf'
 include {psm_percolator; psm_percolator as onlybest_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
 
@@ -45,8 +44,6 @@ workflow sage_identification {
     pin_files = psm_tsvs_and_pin.pin_file
     onlybest_pin_files = psm_tsvs_and_pin.onlybest_pin_file
 
-    tda_results = target_decoy_approach(psm_tsvs, 'sage')
-
     pout_files = psm_percolator(pin_files)
     onlybest_pout_files = onlybest_percolator(onlybest_pin_files)
 
@@ -59,7 +56,6 @@ workflow sage_identification {
     publish:
     return_files >> 'sage'
     psm_tsvs >> 'sage'
-    tda_results >> 'sage'
     pin_files >> 'sage'
     onlybest_pin_files >> 'sage'
     pout_files >> 'sage'

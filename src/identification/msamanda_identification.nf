@@ -10,7 +10,6 @@ params.msamanda_psm_id_pattern = "(.*)"
 params.msamanda_spectrum_id_pattern = '(.*)'
 
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
-include {target_decoy_approach} from '../postprocessing/default_target_decoy_approach.nf'
 include {psm_percolator; psm_percolator as onlybest_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
 
@@ -43,8 +42,6 @@ workflow msamanda_identification {
     pin_files = psm_tsvs_and_pin.pin_file
     onlybest_pin_files = psm_tsvs_and_pin.onlybest_pin_file
 
-    tda_results = target_decoy_approach(psm_tsvs, 'msamanda')
-
     pout_files = psm_percolator(pin_files)
     onlybest_pout_files = onlybest_percolator(onlybest_pin_files)
 
@@ -57,7 +54,6 @@ workflow msamanda_identification {
     publish:
     return_files >> 'msamanda'
     psm_tsvs >> 'msamanda'
-    tda_results >> 'msamanda'
     pin_files >> 'msamanda'
     onlybest_pin_files >> 'msamanda'
     pout_files >> 'msamanda'

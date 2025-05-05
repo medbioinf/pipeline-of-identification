@@ -15,7 +15,6 @@ params.msgfplus_psm_id_pattern = "(.*)"
 params.msgfplus_spectrum_id_pattern = '(.*)'
 
 include {convert_chunked_result_to_psm_utils; enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
-include {target_decoy_approach} from '../postprocessing/default_target_decoy_approach.nf'
 include {psm_percolator; psm_percolator as onlybest_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
 
@@ -60,8 +59,6 @@ workflow msgfplus_identification {
     pin_files = psm_tsvs_and_pin.pin_file
     onlybest_pin_files = psm_tsvs_and_pin.onlybest_pin_file
 
-    tda_results = target_decoy_approach(psm_tsvs, 'msgfplus')
-
     pout_files = psm_percolator(pin_files)
     onlybest_pout_files = onlybest_percolator(onlybest_pin_files)
 
@@ -74,7 +71,6 @@ workflow msgfplus_identification {
     publish:
     msgfplus_results.map{ it -> it[1] } >> 'msgfplus'
     psm_tsvs >> 'msgfplus'
-    tda_results >> 'msgfplus'
     pin_files >> 'msgfplus'
     onlybest_pin_files >> 'msgfplus'
     pout_files >> 'msgfplus'
