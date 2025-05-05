@@ -19,7 +19,7 @@ def argparse_setup():
     parser = argparse.ArgumentParser()
     parser.add_argument("-in_file", help="Input file name")
     parser.add_argument("-out_file", help="Output file name")
-    parser.add_argument("-searchengine", help="The searchengine (only mandatory for comet, maxquant, msgfplus)")
+    parser.add_argument("-searchengine", help="The searchengine (only mandatory for comet, maxquant, msgfplus, msfragger)")
 
     return parser.parse_args()
 
@@ -34,10 +34,12 @@ if __name__ == "__main__":
         "Oxidation (M)": "U:Oxidation",
         "+15.9949": "U:Oxidation",
         "+15.99492": "U:Oxidation",
+        "+15.994915": "U:Oxidation",
         "Carbamidomethyl": "U:Carbamidomethyl",
         "Carbamidomethyl (C)": "U:Carbamidomethyl",
         "+57.0215": "U:Carbamidomethyl",
         "+57.02147": "U:Carbamidomethyl",
+        "+57.021465": "U:Carbamidomethyl",
         "Acetyl (Protein N-term)": "U:Acetylation",
     })
 
@@ -61,5 +63,10 @@ if __name__ == "__main__":
             # these scores are usually "spec e-value", so use their -ln(score)
             psm["score"] = -math.log(psm["score"])  # the MS-GF:SpecEValue
             psm["metadata"]["MS-GF:EValue"] = -math.log(float(psm["metadata"]["MS-GF:EValue"]))
+    elif (args.searchengine == "msfragger"):
+        for psm in psm_list:
+            # the score is an "expect value", so use its -ln(score)
+            psm["score"] = -math.log(float(psm["metadata"]["search_score_expect"]))    # use the search_score_expect here
+            del psm["metadata"]["search_score_expect"]                          # ... and remove it from the metadata
 
     write_file(psm_list, args.out_file, filetype="tsv") 
