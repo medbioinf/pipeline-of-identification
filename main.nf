@@ -13,6 +13,7 @@ params.fasta_target_decoy = ''
 params.precursor_tol_ppm = 10
 params.fragment_tol_da = 0.02
 params.is_timstof = false
+params.entrapment_fold = 0
 
 // keep the (converted) mzML files
 params.keep_mzmls = true
@@ -36,6 +37,7 @@ params.sage_config_file = "${baseDir}/config/sage_config.json"
 params.xtandem_config_file = "${baseDir}/config/xtandem_input.xml"
 
 // including modules
+include {create_entrapment_database} from "./src/preprocess/create_entrapment_database.nf"
 include {create_decoy_database} from "./src/preprocess/create_decoy_database.nf"
 include {convert_to_mzml} from "./src/preprocess/convert_to_mzml.nf"
 
@@ -72,6 +74,18 @@ workflow {
 
     if (!params.fasta) {
         error("need to state a FASTA file for identification")
+    }
+
+    if (!(params.entrapment_fold instanceof Integer)) {
+        error("entrapment fold should be an integer")
+    }
+
+    if (params.entrapment_fold < 0) {
+        error("entrapment fold needs to be >= 0")
+    }
+
+    if (params.fasta_target_decoy && params.entrapment_fold > 0) {
+        error("entrapment fold and target-decoy FASTA are mutually exclusive, please provide only one")
     }
 
     if (params.mzml_files) {
@@ -119,13 +133,17 @@ workflow {
         mzmls = convert_to_mzml(raw_files)
     }
 
+    if (params.entrapment_fold > 0) {
+        // create the entrapment database
+        fasta_target = create_entrapment_database(fasta_target, params.entrapment_fold)
+    }
+
     // create the target-decoy-DB, if not given
     if (params.fasta_target_decoy) {
         fasta_target_decoy = Channel.fromPath(params.fasta_target_decoy).first()
     } else {
         fasta_target_decoy = create_decoy_database(fasta_target, "reverse")
     }
-
 
     // run the search engines with post-processing
     if (params.execute_comet) {
