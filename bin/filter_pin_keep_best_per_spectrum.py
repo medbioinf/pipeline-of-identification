@@ -32,6 +32,8 @@ if __name__ == "__main__":
         se_score = "maxquant_Score"
     elif searchengine == "msamanda":
         se_score = "amanda_score"
+    elif searchengine == "msfragger":
+        se_score = "neg_ln_msfragger_expect"
     elif searchengine == "msgfplus":
         se_score = "ln_msgf_specevalue"
     elif searchengine == "sage":
