@@ -15,7 +15,7 @@ def argparse_setup():
     parser.add_argument("-in_file", help="Input file name")
     parser.add_argument("-out_file", help="Output tsv file (for MS2rescore)")
     parser.add_argument("-out_pin", help="Output PIN file (for percolator)")
-    parser.add_argument("-searchengine", help="The searchengine (comet, maxquant, msaamanda, msgfplus, sage, xtandem)")
+    parser.add_argument("-searchengine", help="The searchengine (comet, maxquant, msaamanda, msfragger, msgfplus, sage, xtandem)")
 
     return parser.parse_args()
 
@@ -72,6 +72,14 @@ if __name__ == "__main__":
             "score": "amanda_score",
             "metadata": {
                 "binom score": "amanda_binom_score",
+                },
+        }
+    elif searchengine == "msfragger":
+        score_mapping = {
+            "score": "neg_ln_msfragger_expect",
+            "metadata": {
+                "search_score_hyperscore": "msfragger_hyperscore",
+                "search_score_nextscore": "msfragger_nextscore"
                 },
         }
     elif searchengine == "msgfplus":
@@ -132,6 +140,10 @@ if __name__ == "__main__":
         
         psm.rescoring_features = rescoring_features
 
+        # if decoy is not set -> set it to True (will be adjusted immediately)
+        if psm.is_decoy == None:
+            psm.is_decoy = True
+        
         # adjust decoys: only mark as decoy, if all proteins are decoys
         if psm.is_decoy:
             if psm.protein_list is not None and psm.protein_list != []:
@@ -141,6 +153,7 @@ if __name__ == "__main__":
                         break
 
     # %%
+    psm_list.calculate_qvalues()
     write_file(psm_list, outfile, filetype="tsv")
 
     #%%

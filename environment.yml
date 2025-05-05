@@ -8,5 +8,7 @@ dependencies:
   - pip
   - setuptools
   - git
+  # rust is needed as long as the ms2rescore.rs is not updated
+  - rust=1.86.0
   - pip:
     - -r requirements.txt

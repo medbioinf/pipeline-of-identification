@@ -1,6 +1,7 @@
 nextflow.enable.dsl=2
 
-python_image = 'medbioinf/ident-comparison-python'
+params.convert_psm_tsv_mem = "60 GB"
+params.enhance_psm_tsv_mem = "8 GB"
 
 /**
  * Executes postprocessing steps to enhance the psm_utils TSV and prepare the PIN files
@@ -9,17 +10,39 @@ python_image = 'medbioinf/ident-comparison-python'
  */
 workflow convert_and_enhance_psm_tsv {
     take:
-        searchengine_results
-        type
-        searchengine
+    searchengine_results
+    type
+    searchengine
 
     main:
-        psm_utils_tsvs = convert_searchengine_to_psm_utils(searchengine_results, type)
-        enhance_psms_and_create_pin = enhance_psms_and_create_pin(psm_utils_tsvs, searchengine)
+    psm_utils_tsvs = convert_searchengine_to_psm_utils(searchengine_results, type)
+    enhanced_and_pins = enhance_psm_tsv(psm_utils_tsvs, searchengine)
+    
+    emit:
+    psm_tsv = enhanced_and_pins.psm_tsv
+    pin_file = enhanced_and_pins.pin_file
+    onlybest_pin_file = enhanced_and_pins.onlybest_pin_file
+}
+
+
+/**
+ * Executes postprocessing steps to enhance the psm_utils TSV and prepare the PIN files
+ *
+ * @return tuples containing the enhanced psm_utils TSVs and the corresponding PIN files
+ */
+workflow enhance_psm_tsv {
+    take:
+    psm_utils_tsvs
+    searchengine
+
+    main:
+    enhance_psms_and_create_pin = enhance_psms_and_create_pin(psm_utils_tsvs, searchengine)
+    onlybest_pin_file = filter_pin_keep_only_best(enhance_psms_and_create_pin.pin_file, searchengine)
 
     emit:
-        enhance_psms_and_create_pin.psm_tsv
-        enhance_psms_and_create_pin.pin_file
+    psm_tsv = enhance_psms_and_create_pin.psm_tsv
+    pin_file = enhance_psms_and_create_pin.pin_file
+    onlybest_pin_file
 }
 
 /**
@@ -27,18 +50,35 @@ workflow convert_and_enhance_psm_tsv {
  */
 process convert_searchengine_to_psm_utils {
     cpus 2
-    memory '24GB'
-
-    container { python_image }
+    memory { params.convert_psm_tsv_mem }
+    container { params.python_image }
 
     input:
     path searchengine_results
     val type
 
-
     output:
     path "*.psm_utils.tsv"
 
+    script:
+    """
+    convert_to_psm_utils.py -in_file ${searchengine_results} -out_file ${searchengine_results}.psm_utils.tsv -in_type ${type}
+    """ 
+}
+
+process convert_chunked_result_to_psm_utils {
+    cpus 2
+    memory { params.convert_psm_tsv_mem }
+    container { params.python_image }
+
+    input:
+    tuple val(original_mzml_basename), path(searchengine_results)
+    val type
+
+    output:
+    tuple val(original_mzml_basename), path("${searchengine_results}.psm_utils.tsv")
+
+    script:
     """
     convert_to_psm_utils.py -in_file ${searchengine_results} -out_file ${searchengine_results}.psm_utils.tsv -in_type ${type}
     """ 
@@ -53,9 +93,8 @@ process convert_searchengine_to_psm_utils {
  */
 process enhance_psms_and_create_pin {
     cpus 2
-    memory '8GB'
-
-    container { python_image }
+    memory { params.enhance_psm_tsv_mem }
+    container { params.python_image }
 
     input:
     path psm_utils_tsv
@@ -65,11 +104,31 @@ process enhance_psms_and_create_pin {
     path "${psm_utils_tsv.baseName}.enhanced.tsv", emit: psm_tsv
     path "${psm_utils_tsv.baseName}.pin", emit: pin_file
 
+    script:
     """
     adjust_psm_list.py -in_file ${psm_utils_tsv} -out_file ${psm_utils_tsv.baseName}.adjusted.tsv -searchengine ${searchengine}
     psms_to_pin_and_enhancedTSV.py -in_file ${psm_utils_tsv.baseName}.adjusted.tsv -out_file ${psm_utils_tsv.baseName}.enhanced.tsv -out_pin  ${psm_utils_tsv.baseName}.pre.pin -searchengine ${searchengine}
 
     # correct the PIN file by moving the scan number to third column and adding correct SpecId (increasing integer)
-    awk '{FS="\t";OFS="\t"; if (NR>1) { \$3=\$1; \$1=NR-1; gsub(".*scan=", "", \$3)  } print}' ${psm_utils_tsv.baseName}.pre.pin > ${psm_utils_tsv.baseName}.pin
+    awk '{FS="\t";OFS="\t"; if (NR>1) { \$3=\$1; \$1=NR-1; gsub(".*=", "", \$3) } print}' ${psm_utils_tsv.baseName}.pre.pin > ${psm_utils_tsv.baseName}.pin
+    """
+}
+
+
+process filter_pin_keep_only_best {
+    cpus 2
+    memory { params.enhance_psm_tsv_mem }
+    container { params.python_image }
+
+    input:
+    path pin_files
+    val searchengine
+
+    output:
+    path "${pin_files.baseName}.onlybest.pin"
+
+    script:
+    """
+    filter_pin_keep_best_per_spectrum.py -in_file ${pin_files} -out_pin ${pin_files.baseName}.onlybest.pin -searchengine ${searchengine}
     """
 }

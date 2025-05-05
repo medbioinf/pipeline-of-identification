@@ -1,120 +1,112 @@
 nextflow.enable.dsl=2
 
-comet_image = 'quay.io/medbioinf/comet-ms:v2024.01.0'
-python_image = 'medbioinf/ident-comparison-python'
+params.comet_image = 'quay.io/medbioinf/comet-ms:v2024.01.0'
 
 // number of threads used by comet
 params.comet_threads = 16
+params.comet_mem = "8 GB"
 
-include {convert_and_enhance_psm_tsv} from workflow.projectDir + '/src/postprocessing/convert_and_enhance_psm_tsv.nf'
-include {target_decoy_approach} from workflow.projectDir + '/src/postprocessing/default_target_decoy_approach.nf'
-include {psm_percolator} from workflow.projectDir + '/src/postprocessing/percolator.nf'
-include {ms2rescore_workflow} from workflow.projectDir + '/src/postprocessing/ms2rescore.nf'
+params.comet_psm_id_pattern = "(.*)"
+params.comet_spectrum_id_pattern = '.*scan=(\\d+)$'
+
+include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
+include {psm_percolator; psm_percolator as onlybest_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
+include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
 
 /**
  * Exports the identification using Comet configured by a SDRF files
  */
 workflow comet_identification {
     take:
-        sdrf
-        fasta
-        mzmls
+    default_params_file
+    fasta
+    mzmls
+    precursor_tol_ppm
+    fragment_tol_da
 
     main:
-        default_comet_params_file = create_default_comet_param_file()
+    comet_params_file = adjust_comet_param_file(default_params_file, precursor_tol_ppm, fragment_tol_da)
+    
+    comet_mzids = identification_with_comet(fasta, mzmls, comet_params_file)
+    comet_mzids = comet_mzids.flatten()
+    
+    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(comet_mzids, 'mzid', 'comet')
+    psm_tsvs = psm_tsvs_and_pin.psm_tsv
+    pin_files = psm_tsvs_and_pin.pin_file
+    onlybest_pin_files = psm_tsvs_and_pin.onlybest_pin_file
 
-        comet_param_files = create_comet_param_files_from_sdrf(sdrf, default_comet_params_file)
-        comet_param_files = comet_param_files.flatten()
-        
-        // create a map containing the mzML file and the corresponding comet_param_file
-        mzml_and_param_file = comet_param_files.map { it -> [ it.name.take(it.name.lastIndexOf('.comet.params')), it.name ] }
+    pout_files = psm_percolator(pin_files)
+    onlybest_pout_files = onlybest_percolator(onlybest_pin_files)
 
-        comet_mzids = identification_with_comet(mzml_and_param_file, fasta, mzmls.collect(), comet_param_files.collect())
-        comet_mzids = comet_mzids.flatten()
-        
-        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(comet_mzids, 'mzid', 'comet')
-        psm_tsvs = psm_tsvs_and_pin[0]
-        pin_files = psm_tsvs_and_pin[1]
+    psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.comet_psm_id_pattern, params.comet_spectrum_id_pattern, '^DECOY_', 'comet')
+    
+    // perform percolation on MS2Rescore results (both all and onlybest)
+    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins.concat(ms2rescore_pins.ms2rescore_onlybest_base_pins))
 
-        tda_results = target_decoy_approach(psm_tsvs, 'comet')
-
-        pout_files = psm_percolator(pin_files)
-
-        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
-        ms2rescore_results = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), 'comet')
-        mokapot_results = ms2rescore_results[0]
-        mokapot_features = ms2rescore_results[1]
-
-    emit:
-        comet_mzids
-        psm_tsvs
-        tda_results
-        pin_files
-        pout_files
-        mokapot_results
-        mokapot_features
+    publish:
+    comet_mzids >> 'comet'
+    psm_tsvs >> 'comet'
+    pin_files >> 'comet'
+    onlybest_pin_files >> 'comet'
+    pout_files >> 'comet'
+    onlybest_pout_files >> 'comet'
+    ms2rescore_pins >> 'comet'
+    ms2rescore_percolator_results >> 'comet'
 }
 
-/**
- * Creates a default comet params file
- */
-process create_default_comet_param_file {
-    container { comet_image }
 
-    output:
-    path "comet.params.new"
-
-    """
-    comet -p
-    """
-}
-
-/**
- * Creates a comet params file from an SDRF file
- * @param sdrf The SDRF file
- * @param default_comet_params_file The default comet params file
- * @return The comet params file
- */
-process create_comet_param_files_from_sdrf {
-    container { python_image }
+process adjust_comet_param_file {
+    cpus 2
+    memory "1 GB"
+    container { params.python_image }
 
     input:
-    path sdrf
-    path default_comet_params_file
+    path comet_params_file
+    val precursor_tol_ppm
+    val fragment_tol_da
 
     output:
-    path "*.params"
+    path "adjusted_comet.params"
 
+    script:
     """
-    python -m sdrf_convert $sdrf comet --config-folder ./ $default_comet_params_file
+    cp ${comet_params_file} adjusted_comet.params
+    
+    sed -i 's;peptide_mass_tolerance_upper =.*;peptide_mass_tolerance_upper = ${precursor_tol_ppm};' adjusted_comet.params
+    sed -i 's;peptide_mass_tolerance_lower =.*;peptide_mass_tolerance_lower = -${precursor_tol_ppm};' adjusted_comet.params
+    sed -i 's;peptide_mass_units =.*;peptide_mass_units = 2;' adjusted_comet.params
+
+    sed -i 's;fragment_bin_tol =.*;fragment_bin_tol = ${fragment_tol_da};' adjusted_comet.params
+    
+    sed -i "s;^num_threads.*;num_threads = ${params.comet_threads};" adjusted_comet.params
+
+    sed -i "s;^output_sqtfile.*;output_sqtfile = 0;" adjusted_comet.params
+    sed -i "s;^output_txtfile.*;output_txtfile = 0;" adjusted_comet.params
+    sed -i "s;^output_pepxmlfile.*;output_pepxmlfile = 0;" adjusted_comet.params
+    sed -i "s;^output_mzidentmlfile.*;output_mzidentmlfile = 1;" adjusted_comet.params
+    sed -i "s;^output_percolatorfile.*;output_percolatorfile = 0;" adjusted_comet.params
+    
+    sed -i "s;^num_output_lines.*;num_output_lines = 5;" adjusted_comet.params
     """
 }
 
 
 process identification_with_comet {
     cpus { params.comet_threads }
-    container { comet_image }
+    memory { params.comet_mem }
+    container { params.comet_image }
 
     input:
-    val mzmls_and_comet_param_files
     path fasta
     path mzmls
-    path comet_param_files
+    path comet_param_file
 
     output:
     path "*.mzid"
 
+    script:
     """
-    sed -i "s;^num_threads.*;num_threads = ${params.comet_threads};" ${mzmls_and_comet_param_files[1]}
-
-    sed -i "s;^output_sqtfile.*;output_sqtfile = 0;" ${mzmls_and_comet_param_files[1]}
-    sed -i "s;^output_txtfile.*;output_txtfile = 0;" ${mzmls_and_comet_param_files[1]}
-    sed -i "s;^output_pepxmlfile.*;output_pepxmlfile = 0;" ${mzmls_and_comet_param_files[1]}
-    sed -i "s;^output_mzidentmlfile.*;output_mzidentmlfile = 1;" ${mzmls_and_comet_param_files[1]}
-    sed -i "s;^output_percolatorfile.*;output_percolatorfile = 0;" ${mzmls_and_comet_param_files[1]}
-    
-    sed -i "s;^num_output_lines.*;num_output_lines = 5;" ${mzmls_and_comet_param_files[1]}
-    
-    comet -P${mzmls_and_comet_param_files[1]} -D${fasta} ${mzmls_and_comet_param_files[0]}
+    comet -P${comet_param_file} -D${fasta} ${mzmls}
     """
 }

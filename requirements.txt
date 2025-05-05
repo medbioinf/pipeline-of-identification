@@ -1,2 +1,5 @@
-git+https://github.com/elixir-proteomics-community/sdrf_convert
-psm-utils~=1.0.0
+# psm-utils~=1.1.0
+psm-utils @ git+https://github.com/julianu/psm_utils.git@pepxml-and-mzid-fixes
+#mokapot~=0.10.0
+ms2rescore_rs @ git+https://github.com/di-hardt/ms2rescore-rs.git@ce1f8b23ca047a90e9ec737acb49fb15349d8b28
+ms2rescore~=3.1.5

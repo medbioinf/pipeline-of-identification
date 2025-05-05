@@ -24,7 +24,7 @@
     <!-- all combinations of possible values are possible -->
     <Instrument>b, y</Instrument>
     <!-- <MS1Tol Unit="Da|ppm|mmu">VALUE</MS1Tol> (default: "5 ppm") -->
-    <MS1Tol Unit="ppm">20</MS1Tol>
+    <MS1Tol Unit="ppm">10</MS1Tol>
     <!-- <MS2Tol Unit="Da|ppm|mmu">VALUE</MS2Tol> (default: "0.02 Da") -->
     <MS2Tol Unit="Da">0.02</MS2Tol>
     <!-- Value range: 1-999 (default: 5) -->

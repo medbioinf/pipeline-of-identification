@@ -5,6 +5,9 @@ work/
 # binary
 nextflow
 trace*
+ms2pip-model/
+testing/
+*.zip
 
 ##### python stuff
 # Byte-compiled / optimized / DLL files

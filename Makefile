@@ -1,7 +1,7 @@
 docker-imgs:
 	docker build -t medbioinf/ident-comparison-python:latest -f docker/python/Dockerfile .
 
-	docker pull proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses:skyline_24.1.0.198-6a0775e
+	docker pull proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses:3.0.25073-842baef
 
 	docker pull quay.io/medbioinf/openms:3.1.0
 

@@ -2,80 +2,206 @@ nextflow.enable.dsl=2
 
 nextflow.preview.output = true
 
-// including modules
-include {raw_file_conversion} from workflow.projectDir + '/src/preprocess/raw_file_conversion.nf'
-include {create_decoy_database} from workflow.projectDir + '/src/preprocess/create_decoy_database.nf'
-
-include {xtandem_identification} from workflow.projectDir + '/src/identification/xtandem_identification.nf'
-include {comet_identification} from workflow.projectDir + '/src/identification/comet_identification.nf'
-include {sage_identification} from workflow.projectDir + '/src/identification/sage_identification.nf'
-include {msamanda_identification} from workflow.projectDir + '/src/identification/msamanda_identification.nf'
-include {msgfplus_identification} from workflow.projectDir + '/src/identification/msgfplus_identification.nf'
-include {maxquant_identification} from workflow.projectDir + '/src/identification/maxquant_identification.nf'
-
+// default python image
+params.python_image = 'medbioinf/ident-comparison-python'
 
 // parameters set by the command line
-//params.raws = 'directory with raw files'
-params.mzml_files = '*.mzML'     // my contain globs
-params.fasta = 'fasta file (without decoys!)'
-params.sdrf = 'sdrf file'
-params.out = 'output directory'
+params.raw_files = ''
+params.mzml_files = ''    // may contain globs
+params.fasta = ''
+params.fasta_target_decoy = ''
+params.precursor_tol_ppm = 10
+params.fragment_tol_da = 0.02
+params.is_timstof = false
 
-// TODO: set these in a useful way
-params.max_missed_cleavages = 2
-params.max_parent_charge = 4
+// keep the (converted) mzML files
+params.keep_mzmls = true
 
-/** TODO: set the num_threads someway useful */
+// should the search engines be executed?
+params.execute_comet = true
+params.execute_maxquant = true
+params.execute_msamanda = true
+params.execute_msfragger = true
+params.execute_msgfplus = true
+params.execute_sage = true
+params.execute_xtandem = true
 
-// TODO: create these with sdrf-convert
-params.sage_config_file = "${baseDir}/config/sage_config.json"
-params.msamanda_config_file = "${baseDir}/config/msamanda_settings.xml"
-params.msgfplus_params_file = "${baseDir}/config/MSGFPlus_Params.txt"
+// default parameter files
+params.comet_params_file = "${baseDir}/config/comet.params"
 params.maxquant_params_file = "${baseDir}/config/mqpar.xml"
+params.msamanda_config_file = "${baseDir}/config/msamanda_settings.xml"
+params.msfragger_config_file = "${baseDir}/config/closed_fragger.params"
+params.msgfplus_params_file = "${baseDir}/config/MSGFPlus_Params.txt"
+params.sage_config_file = "${baseDir}/config/sage_config.json"
+params.xtandem_config_file = "${baseDir}/config/xtandem_input.xml"
+
+// including modules
+include {create_decoy_database} from "./src/preprocess/create_decoy_database.nf"
+include {convert_to_mzml} from "./src/preprocess/convert_to_mzml.nf"
+
+include {comet_identification} from "./src/identification/comet_identification.nf"
+include {maxquant_identification} from "./src/identification/maxquant_identification.nf"
+include {msamanda_identification} from "./src/identification/msamanda_identification.nf"
+include {msfragger_identification} from "./src/identification/msfragger_identification.nf"
+include {msgfplus_identification} from "./src/identification/msgfplus_identification.nf"
+include {sage_identification} from "./src/identification/sage_identification.nf"
+include {xtandem_identification} from "./src/identification/xtandem_identification.nf"
 
 workflow {
-    //thermo_raw_files = Channel.fromPath(params.raw_files).flatten()
-    mzmls = Channel.fromPath(params.mzml_files).flatten()
-    sdrf = Channel.fromPath(params.sdrf).first()
-    target_fasta = Channel.fromPath(params.fasta).first()
+    main:
+    // TODO NOW:
+    // - check MS2Rescore on TimsTOF data: are the params set correctly?
+    // - convert .d to mzML
+    // - save the paramater files!
+    // - allow pre-created taregt-decoy DB
 
-    // TODO: this should go into sdrf-convert
-    sage_config_file = Channel.fromPath(params.sage_config_file).first()
-    msamanda_config_file = Channel.fromPath(params.msamanda_config_file).first()
-    msgfplus_params_file = Channel.fromPath(params.msgfplus_params_file).first()
-    maxquant_params_file = Channel.fromPath(params.maxquant_params_file).first()
+    // TODO: checken, welche params sich in "high res / low res" unterscheiden
+    // - auf jeden fall comet
+    // - msgf+ auch das modell
 
-    // Convert raw files to mzML
-    //mzmls = raw_file_conversion(thermo_raw_files)
+    // TODO: add PTM definitions
 
-    // create the target-decoy-DB
-    target_decoy_fasta = create_decoy_database(target_fasta, "reverse")
 
-    // Identification
-    xtandem_results = xtandem_identification(sdrf, target_decoy_fasta, mzmls, params.max_missed_cleavages, params.max_parent_charge)
-    comet_mzids = comet_identification(sdrf, target_decoy_fasta, mzmls)
-    sage_results = sage_identification(sage_config_file, target_decoy_fasta, mzmls)
-    msamanda_results = msamanda_identification(msamanda_config_file, target_decoy_fasta, mzmls)
-    msgfplus_results = msgfplus_identification(msgfplus_params_file, target_decoy_fasta, mzmls)
-    maxquant_results = maxquant_identification(maxquant_params_file, target_fasta, mzmls)
-    
-    // Postprocessing
+    if (params.is_timstof && !params.raw_files) {
+        error("TimsTOF data needs raw files specified!")
+    }
 
-    //pia_tda_comet = pia_tda_analysis(comet_mzids)
+    if (!params.raw_files && !params.mzml_files) {
+        error("neither raw file/path, nor mzML files given, please provide at least one")
+    }
 
-    // Analysis of the data
+    if (!params.fasta) {
+        error("need to state a FASTA file for identification")
+    }
 
-    publish:
-    // publish the data in the "out" directory
-    xtandem_results >> 'xtandem'
-    comet_mzids >> 'comet'
-    sage_results >> 'sage'
-    msamanda_results >> 'msamanda'
-    msgfplus_results >> 'msgfplus'
-    maxquant_results >> 'maxquant'
+    if (params.mzml_files) {
+        mzmls = Channel.fromPath(params.mzml_files).flatten()
+        mzmls_info = mzmls
+    } else {
+        mzmls_info = "no mzML given"
+    }
+
+    if (params.raw_files) {
+        raw_files = Channel.fromPath(params.raw_files).flatten()
+        raw_files_info = raw_files
+    } else {
+        raw_files_info = "no raw spectra given"
+    }
+
+    fasta_target = Channel.fromPath(params.fasta).first()
+    if (params.fasta_target_decoy) {
+        fasta_target_decoy = Channel.fromPath(params.fasta_target_decoy).first()
+    } else {
+        fasta_target_decoy = "no target-decoy FASTA given"
+    }
+
+    // color-codes for output: https://github.com/nextflow-io/nf-schema/blob/ecf159f53d45200ef70920c03e75077b5689a386/plugins/nf-schema/src/main/nextflow/validation/Utils.groovy#L222
+    log.info "\033[1;32m" + "Pipeline of Identification" + "\033[0;32m" + """\
+
+    raw files:  ${raw_files_info}
+    mzML files: ${mzmls_info}
+    target FASTA: ${fasta_target}
+    target decoy FASTA: ${fasta_target_decoy}
+    precursor tolerance (ppm): ${params.precursor_tol_ppm}
+    fragment tolerance (Da): ${params.fragment_tol_da}
+    timsTOF data: ${params.is_timstof}
+    Comet:     ${params.execute_comet}
+    MaxQuant:  ${params.execute_maxquant}
+    MS Amanda: ${params.execute_msamanda}
+    MSFragger: ${params.execute_msfragger}
+    MS-GF+:    ${params.execute_msgfplus}
+    Sage:      ${params.execute_sage}
+    X!Tandem:  ${params.execute_xtandem}
+""".stripIndent(true) + "\033[0m"
+
+    // TODO: convert raw files, if not given
+    if (!params.mzml_files) {
+        mzmls = convert_to_mzml(raw_files)
+    }
+
+    // create the target-decoy-DB, if not given
+    if (params.fasta_target_decoy) {
+        fasta_target_decoy = Channel.fromPath(params.fasta_target_decoy).first()
+    } else {
+        fasta_target_decoy = create_decoy_database(fasta_target, "reverse")
+    }
+
+
+    // run the search engines with post-processing
+    if (params.execute_comet) {
+        comet_params_file = Channel.fromPath(params.comet_params_file).first()
+        comet_identification(comet_params_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
+    }
+
+    if (params.execute_maxquant) {
+        maxquant_params_file = Channel.fromPath(params.maxquant_params_file).first()
+        maxquant_identification(maxquant_params_file, fasta_target, mzmls, params.precursor_tol_ppm)
+    }
+
+    if (params.execute_msamanda) {
+        msamanda_config_file = Channel.fromPath(params.msamanda_config_file).first()
+        msamanda_identification(msamanda_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
+    }
+
+    if (params.execute_msfragger) {
+        msfragger_config_file = Channel.fromPath(params.msfragger_config_file).first()
+        msfragger_identification(msfragger_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
+    }
+
+    if (params.execute_msgfplus) {
+        msgfplus_params_file = Channel.fromPath(params.msgfplus_params_file).first()
+        msgfplus_identification(msgfplus_params_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm)
+    }
+
+    if (params.execute_sage) {
+        sage_config_file = Channel.fromPath(params.sage_config_file).first()
+        sage_identification(sage_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
+    }
+
+    if (params.execute_xtandem) {
+        xtandem_config_file = Channel.fromPath(params.xtandem_config_file).first()
+        xtandem_identification(xtandem_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
+    }
 }
 
 output {
-    directory "${params.out}"
-    mode 'copy'
+    'mzmls' {
+        enabled params.keep_mzmls
+        path 'mzmls'
+    }
+
+    'comet' {
+        enabled params.execute_comet
+        path 'comet'
+    }
+
+    'maxquant' {
+        enabled params.execute_maxquant
+        path 'maxquant'
+    }
+
+    'msamanda' {
+        enabled params.execute_msamanda
+        path 'msamanda'
+    }
+
+    'msfragger' {
+        enabled params.execute_msfragger
+        path 'msfragger'
+    }
+
+    'msgfplus' {
+        enabled params.execute_msgfplus
+        path 'msgfplus'
+    }
+
+    'sage' {
+        enabled params.execute_sage
+        path 'sage'
+    }
+
+    'xtandem' {
+        enabled params.execute_xtandem
+        path 'xtandem'
+    }
 }
