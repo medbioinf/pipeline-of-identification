@@ -47,6 +47,6 @@ process call_entrapment_database {
     """
     java -jar /opt/fdrbench/fdrbench.jar -db ${fasta} -o ${fasta.baseName}-entrapment.fasta -fold ${fold} -level protein -entrapment_label ENTRAPMENT_ -entrapment_pos 0 -uniprot -check
     # 'Reheader' to add entrapment index to database and accession part of the header
-    sed -r -i "s;^>ENTRAPMENT_(.+)\\_([0-9]+)\$;>ENTRAPMENT_\\2_\\1_\\2;g" ${fasta.baseName}-entrapment.fasta
+    sed -r -i "s;^>ENTRAPMENT_(.+)\\|(.+)\\|(.+)_([0-9]+)\$;>ENTRAPMENT_\\4_\\1|ENTRAPMENT_\\4_\\2|\\3_\\4;g" ${fasta.baseName}-entrapment.fasta
     """
 }
