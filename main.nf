@@ -55,7 +55,6 @@ workflow {
     // - check MS2Rescore on TimsTOF data: are the params set correctly?
     // - convert .d to mzML
     // - save the paramater files!
-    // - allow pre-created taregt-decoy DB
 
     // TODO: checken, welche params sich in "high res / low res" unterscheiden
     // - auf jeden fall comet
