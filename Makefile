@@ -10,5 +10,7 @@ docker-imgs:
 	docker pull quay.io/medbioinf/xtandem:2017.2.1.4
 	docker pull quay.io/medbioinf/msamanda:3.0.22.071
 	docker pull quay.io/medbioinf/msgfplus:v2024.03.26
+	
+	docker pull quay.io/medbioinf/mzid-merger:1.4.26
 
 	docker pull quay.io/medbioinf/percolator:3.6.5

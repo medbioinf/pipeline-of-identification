@@ -1,0 +1,14 @@
+name: medbioinforub-msfragger
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - setuptools
+  - git
+  - openjdk=21
+  - unzip=6.0
+  - pip:
+    - -r requirements.txt
