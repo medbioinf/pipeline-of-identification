@@ -1,10 +1,12 @@
 nextflow.enable.dsl=2
 
-params.sage_image = 'quay.io/medbioinf/sage:v0.14.7'
+params.sage_image = 'quay.io/medbioinf/sage:v0.15.0-beta.1'
 
 // number of threads used by sage
 params.sage_threads = 1
 params.sage_mem = "100 GB"
+params.sage_prefilter = "false"
+params.sage_prefilter_chunk_size = 0
 
 params.sage_psm_id_pattern = "(.*)"
 params.sage_spectrum_id_pattern = '(.*)'
@@ -91,6 +93,11 @@ with open("${default_config_file}", 'r') as openfile:
 # adjust the tolerances
 json_object["precursor_tol"] = {'ppm': [-${precursor_tol_ppm}, ${precursor_tol_ppm}]}
 json_object["fragment_tol"] = {'da': [-${fragment_tol_da}, ${fragment_tol_da}]}
+
+# adjust database prefilter
+json_object["database"]["prefilter_chunk_size"] = ${params.sage_prefilter_chunk_size}
+json_object["database"]["prefilter"] = (str("${params.sage_prefilter}").strip().lower() == "true")
+json_object["database"]["prefilter_low_memory"] = False
 
 # Writing to sample.json
 with open("./adjusted_sage_config.json", "w") as outfile:

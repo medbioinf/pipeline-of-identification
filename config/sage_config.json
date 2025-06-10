@@ -24,7 +24,10 @@
       "max_variable_mods": 2,
       "decoy_tag": "DECOY_",
       "generate_decoys": false,
-      "fasta": "fake_path.fasta"
+      "fasta": "fake_path.fasta",
+      "prefilter_chunk_size": 0,
+      "prefilter": false,
+      "prefilter_low_memory": false
     },
     "precursor_tol": {
       "ppm": [
