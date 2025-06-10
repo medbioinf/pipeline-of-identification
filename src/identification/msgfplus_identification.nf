@@ -1,6 +1,7 @@
 nextflow.enable.dsl=2
 
 params.msgfplus_image = 'quay.io/medbioinf/msgfplus:v2024.03.26'
+params.mzidmerger_image = 'quay.io/medbioinf/mzid-merger:1.4.26'
 
 // params for MS-GF+
 params.msgfplus_threads = 6
@@ -10,6 +11,7 @@ params.msgfplus_tasks = 0
 params.msgfplus_instrument = "1" // 0: Low-res LCQ/LTQ, 1: Orbitrap/FTICR/Lumos, 2: TOF, 3: Q-Exactive
 
 params.msgfplus_split_input = 10000     // split input mzMLs into chunks of this size, 0 to disable
+params.msgfplus_split_fasta = 0         // split the fasta into this many chunks, 0 to disable
 
 params.msgfplus_psm_id_pattern = "(.*)"
 params.msgfplus_spectrum_id_pattern = '(.*)'
@@ -33,6 +35,10 @@ workflow msgfplus_identification {
     precursor_tol_ppm
 
     main:
+    if (params.msgfplus_split_fasta > 0) {
+        fasta = split_fasta(fasta)
+        fasta = fasta.flatten()
+    }
     fasta_index = build_msgfplus_index(fasta)
 
     if (params.msgfplus_split_input > 0) {
@@ -42,9 +48,33 @@ workflow msgfplus_identification {
         mzmls_to_chunks = mzmls.map{ it -> [it.baseName, it] }
     }
 
-    msgfplus_results = identification_with_msgfplus(msgfplus_params_file, fasta_index, mzmls_to_chunks, precursor_tol_ppm)
+    fasta_idx_mzml_chunk_combo = fasta_index.combine(mzmls_to_chunks)
 
-    psm_tsvs_with_mzml = convert_chunked_result_to_psm_utils(msgfplus_results, 'mzid')
+    // TODO: merge only FASTA-splits, mzml-splits later?!
+    msgfplus_results = identification_with_msgfplus(msgfplus_params_file, fasta_idx_mzml_chunk_combo, precursor_tol_ppm)
+    
+
+    if ((params.msgfplus_split_fasta > 0)) {
+        grouped_results = msgfplus_results.map { it ->
+            tuple(
+                it[0],  // original mzml basename
+                it[1].name.take(it[1].name.lastIndexOf('-split')),  // mzML split
+                it[1].name.substring(it[1].name.lastIndexOf('-split')+7, it[1].name.lastIndexOf('.mzid')), // FASTA split number
+                it[1]  // mzid file
+            )
+        }.groupTuple(by: 1).map { it ->
+            tuple(
+                it[0][0], // original mzml basename
+                it[1],    // mzML split
+                it[3]     // collect all mzid files for this group
+            )
+        }
+        fasta_merged_results = mzid_merger(grouped_results)
+    } else {
+        fasta_merged_results = msgfplus_results
+    }
+
+    psm_tsvs_with_mzml = convert_chunked_result_to_psm_utils(fasta_merged_results, 'mzid')
 
     grouped_results = psm_tsvs_with_mzml.groupTuple(by: 0)
     if (params.msgfplus_split_input > 0) {
@@ -69,7 +99,7 @@ workflow msgfplus_identification {
     ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins.concat(ms2rescore_pins.ms2rescore_onlybest_base_pins))
 
     publish:
-    msgfplus_results.map{ it -> it[1] } >> 'msgfplus'
+    fasta_merged_results.map{ it -> it[1] } >> 'msgfplus'
     psm_tsvs >> 'msgfplus'
     pin_files >> 'msgfplus'
     onlybest_pin_files >> 'msgfplus'
@@ -86,12 +116,11 @@ process identification_with_msgfplus {
 
     input:
     path msgfplus_params_file
-    tuple path(fasta), path(canno), path(cnlcp), path(csarr), path(cseq)
-    tuple val(original_mzml_basename), path(mzml)
+    tuple path(fasta), path(canno), path(cnlcp), path(csarr), path(cseq), val(original_mzml_basename), path(mzml)
     val precursor_tol_ppm
 
     output:
-    tuple val(original_mzml_basename), path("${mzml.baseName}.mzid")
+    tuple val(original_mzml_basename), path("${mzml.baseName}*.mzid")
 
     script:
     """
@@ -100,6 +129,30 @@ process identification_with_msgfplus {
     sed -i 's;^InstrumentID=.*;InstrumentID=${params.msgfplus_instrument};' adjusted_MSGFPlus_Params.txt
 
     java -Xmx${params.msgfplus_mem_gb}G -jar /opt/msgfplus/MSGFPlus.jar -conf adjusted_MSGFPlus_Params.txt -s ${mzml} -d ${fasta} -thread ${params.msgfplus_threads} -tasks ${params.msgfplus_tasks} -o ${mzml.baseName}.mzid
+
+    if [[ ${fasta} == *"-split"* ]]; then
+        splitnum=\$(echo "${fasta}" | sed "s;.*-split-\\([0-9]*\\).fasta;\\1;")
+        echo "renaming ${mzml.baseName}.mzid to ${mzml.baseName}-split-\${splitnum}.mzid"
+        mv ${mzml.baseName}.mzid ${mzml.baseName}-split-\${splitnum}.mzid
+    fi
+    """
+}
+
+
+process split_fasta {
+    cpus 2
+    memory "8 GB"
+    container { params.python_image }
+
+    input:
+    path fasta
+
+    output:
+    path "${fasta.baseName}-split*.fasta", emit: fasta_parts
+
+    script:
+    """
+    split_fasta.py -in_file ${fasta} -out_file_base ${fasta.baseName}-split -splits ${params.msgfplus_split_fasta} 
     """
 }
 
@@ -136,5 +189,24 @@ process merge_psms {
     script:
     """
     merge_chunked_psm_files.py --org_filebase ${original_mzml_basename} --out_filename ${original_mzml_basename}.mzid.psm_utils.tsv --files ${psm_tsvs}
+    """
+}
+
+
+process mzid_merger {
+    cpus 2
+    memory "8 GB"
+    container { params.mzidmerger_image }
+
+    input:
+    tuple val(original_mzml_basename), val(mzml_split), path(mzid_files)
+
+    output:
+    tuple val(original_mzml_basename), path("${mzml_split}.mzid")
+
+    script:
+    """
+    mono /home/mambauser/mzidmerger/MzidMerger.exe -InDir "./" -Filter "*.mzid" -Out ${mzml_split}.merged.mzid
+    mv ${mzml_split}.merged.mzid ${mzml_split}.mzid
     """
 }
