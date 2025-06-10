@@ -5,6 +5,8 @@ params.msfragger_image = 'medbioinf/msfragger'
 // parameters for MSFragger
 params.msfragger_threads = 16
 params.msfragger_mem_gb = 16
+params.msfragger_db_split = 0
+params.msfragger_calibrate = 2
 
 params.msfragger_psm_id_pattern = "(.*)"
 params.msfragger_spectrum_id_pattern = "(.*)"
@@ -81,9 +83,11 @@ process adjust_msfragger_param_file {
     sed -i 's;fragment_mass_tolerance =.*;fragment_mass_tolerance = ${fragment_tol_da};' adjusted_fragger.params
     sed -i 's;fragment_mass_units =.*;fragment_mass_units = 0;' adjusted_fragger.params
 
+    sed -i 's;calibrate_mass =.*;calibrate_mass = ${params.msfragger_calibrate};' adjusted_fragger.params
+
     sed -i "s;^decoy_prefix.*;decoy_prefix = DECOY_;" adjusted_fragger.params
 
-    sed -i "s;^output_format.*;output_format = tsv_pepxml_pin;" adjusted_fragger.params
+    sed -i "s;^output_format.*;output_format = pepxml;" adjusted_fragger.params
     
     sed -i "s;^output_report_topN.*;output_report_topN = 5;" adjusted_fragger.params
     """
@@ -101,12 +105,16 @@ process identification_with_msfragger {
     path fragger_param_file
 
     output:
-    path "*.tsv", emit: tsv
     path "*.pepXML", emit: pepxml
-    path "*.pin", emit: percolator
 
     script:
-    """
-    java -Xmx${params.msfragger_mem_gb}G -jar /opt/MSFragger-4.1/MSFragger-4.1.jar ${fragger_param_file} ${mzmls} 
-    """
+    if (params.msfragger_db_split > 0) {
+        """
+        msfragger_pep_split.py ${params.msfragger_db_split} "java -Xmx${params.msfragger_mem_gb}G -jar" /home/mambauser/MSFragger-4.2/MSFragger-4.2.jar ${fragger_param_file} ${mzmls} 
+        """
+    } else {
+        """
+        java -Xmx${params.msfragger_mem_gb}G -jar /home/mambauser/MSFragger-4.2/MSFragger-4.2.jar ${fragger_param_file} ${mzmls} 
+        """
+    }
 }

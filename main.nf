@@ -51,14 +51,17 @@ include {xtandem_identification} from "./src/identification/xtandem_identificati
 
 workflow {
     main:
-    // TODO NOW:
+    // TODO ASAP:
     // - check MS2Rescore on TimsTOF data: are the params set correctly?
     // - convert .d to mzML
     // - save the paramater files!
 
-    // TODO: checken, welche params sich in "high res / low res" unterscheiden
-    // - auf jeden fall comet
-    // - msgf+ auch das modell
+    // TODO: allow MSFragger calibration on smaller database (especially when using huge DB)
+
+    // TODO: check, which params differ more for "high res / low res"
+    // - comet
+    // - the msgf+ modell
+    // - others?
 
     // TODO: add PTM definitions
 
