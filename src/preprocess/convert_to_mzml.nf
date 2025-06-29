@@ -52,7 +52,10 @@ process convert_bruker_d {
     # here goes the converter...
 
     # msamanda needs explicit "scan=" in the id of a scan (not there in e.g. TimsTOF converted mzML data)
-    sed -i -e 's;<spectrum\\(.*\\) id="index=\\([0-9]*\\)\\(.*\\);<spectrum\\1 id="index=\\2 scan=\\2\\3;' ${input_raw.baseName}.mzML
+    sed -i -e 's/<spectrum\\(.*\\) id="index=\\([0-9]*\\)\\(.*\\)/<spectrum\\1 id="index=\\2 scan=\\2\\3/;s/spectrumRef="\\(.*\\)index=\\([0-9]*\\)\\(.*\\)"/spectrumRef="\\1index=\\2 scan=\\2\\3"/' ${input_raw.baseName}.mzML
+
+    # after this, the mzML index needs to be removed, or just the compression???
+    ## docker run --rm -it -v ./:/data/ proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses:3.0.25073-842baef wine msconvert --mzML -o /data/rem-index --noindex --zlib=off /data/${file};
     """
 }
 

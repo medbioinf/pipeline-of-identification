@@ -147,11 +147,14 @@ process identification_with_maxquant {
     """
     # adjust the mqpar.xml file for our current search and path
     cp ${maxquant_params_file} mqpar_adjusted.xml
-    sed -i "s;<numThreads>[^<]*</numThreads>;<numThreads>${params.maxquant_threads}</numThreads>;" mqpar_adjusted.xml
+
     sed -i "s;<fastaFilePath>[^<]*</fastaFilePath>;<fastaFilePath>${fasta}</fastaFilePath>;" mqpar_adjusted.xml
+
     sed -i "s;<string>CHANGEME_FILE_PATH</string>;<string>${mzmls}</string>;" mqpar_adjusted.xml
 
     sed -i "s;<quantMode>[^<]*</quantMode>;<quantMode>${maxquant_quantmode}</quantMode>;" mqpar_adjusted.xml
+
+    sed -i "s;<numThreads>[^<]*</numThreads>;<numThreads>${params.maxquant_threads}</numThreads>;" mqpar_adjusted.xml
 
     sed -i "s;<msInstrument>[^<]*</msInstrument>;<msInstrument>${maxquant_msinstrument}</msInstrument>;" mqpar_adjusted.xml
     sed -i "s;<useMs1Centroids>[^<]*</useMs1Centroids>;<useMs1Centroids>${maxquant_usems1centroids}</useMs1Centroids>;" mqpar_adjusted.xml

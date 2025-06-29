@@ -4,7 +4,7 @@ params.msamanda_image = 'quay.io/medbioinf/msamanda:3.0.22.071'
 
 // number of threads used by msamanda
 params.msamanda_threads = 16
-params.msamanda_mem = "40 GB"
+params.msamanda_mem = "64 GB"
 
 params.msamanda_psm_id_pattern = "(.*)"
 params.msamanda_spectrum_id_pattern = '(.*)'
