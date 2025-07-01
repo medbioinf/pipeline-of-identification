@@ -14,6 +14,7 @@ params.precursor_tol_ppm = 10
 params.fragment_tol_da = 0.02
 params.is_timstof = false
 params.entrapment_fold = 0
+params.use_only_rank1_psms = true
 
 // keep the (converted) mzML files
 params.keep_mzmls = true
@@ -51,20 +52,6 @@ include {xtandem_identification} from "./src/identification/xtandem_identificati
 
 workflow {
     main:
-    // TODO ASAP:
-    // - check MS2Rescore on TimsTOF data: are the params set correctly?
-    // - convert .d to mzML
-    // - save the paramater files!
-
-    // TODO: allow MSFragger calibration on smaller database (especially when using huge DB)
-
-    // TODO: check, which params differ more for "high res / low res"
-    // - comet
-    // - the msgf+ modell
-    // - others?
-
-    // TODO: add PTM definitions
-
 
     if (params.is_timstof && !params.raw_files) {
         error("TimsTOF data needs raw files specified!")

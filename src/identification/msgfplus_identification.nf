@@ -18,7 +18,7 @@ params.msgfplus_psm_id_pattern = "(.*)"
 params.msgfplus_spectrum_id_pattern = '(.*)'
 
 include {convert_chunked_result_to_psm_utils; enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
-include {psm_percolator; psm_percolator as onlybest_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
+include {psm_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
 
 include {split_mzml_into_chunks} from '../preprocess/convert_to_mzml.nf'
@@ -51,9 +51,7 @@ workflow msgfplus_identification {
 
     fasta_idx_mzml_chunk_combo = fasta_index.combine(mzmls_to_chunks)
 
-    // TODO: merge only FASTA-splits, mzml-splits later?!
     msgfplus_results = identification_with_msgfplus(msgfplus_params_file, fasta_idx_mzml_chunk_combo, precursor_tol_ppm)
-    
 
     if ((params.msgfplus_split_fasta > 0)) {
         grouped_results = msgfplus_results.map { it ->
@@ -88,24 +86,20 @@ workflow msgfplus_identification {
 
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
-    onlybest_pin_files = psm_tsvs_and_pin.onlybest_pin_file
 
     pout_files = psm_percolator(pin_files)
-    onlybest_pout_files = onlybest_percolator(onlybest_pin_files)
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
     ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msgfplus_psm_id_pattern, params.msgfplus_spectrum_id_pattern, '^DECOY_', 'msgfplus')
 
-    // perform percolation on MS2Rescore results (both all and onlybest)
-    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins.concat(ms2rescore_pins.ms2rescore_onlybest_base_pins))
+    // perform percolation on MS2Rescore results
+    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)
 
     publish:
     fasta_merged_results.map{ it -> it[1] } >> 'msgfplus'
     psm_tsvs >> 'msgfplus'
     pin_files >> 'msgfplus'
-    onlybest_pin_files >> 'msgfplus'
     pout_files >> 'msgfplus'
-    onlybest_pout_files >> 'msgfplus'
     ms2rescore_pins >> 'msgfplus'
     ms2rescore_percolator_results >> 'msgfplus'
 }

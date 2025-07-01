@@ -15,6 +15,7 @@ def argparse_setup():
     parser.add_argument("-in_file", help="Input file name")
     parser.add_argument("-out_file", help="Output tsv file (for MS2rescore)")
     parser.add_argument("-out_pin", help="Output PIN file (for percolator)")
+    parser.add_argument("-use_only_rank1_psms", help="Output only PSMs with rank=1 (which still can be multiple per spectrum)", default="true")
     parser.add_argument("-searchengine", help="The searchengine (comet, maxquant, msaamanda, msfragger, msgfplus, sage, xtandem)")
 
     return parser.parse_args()
@@ -155,6 +156,10 @@ if __name__ == "__main__":
                         break
 
     # %%
+    if args.use_only_rank1_psms.lower() == "true":
+        psm_list.set_ranks(lower_score_better=False)
+        psm_list = psm_list.get_rank1_psms()
+    
     psm_list.calculate_qvalues()
     write_file(psm_list, outfile, filetype="tsv")
 
