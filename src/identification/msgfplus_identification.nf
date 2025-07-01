@@ -11,6 +11,7 @@ params.msgfplus_tasks = 0
 params.msgfplus_instrument = "1" // 0: Low-res LCQ/LTQ, 1: Orbitrap/FTICR/Lumos, 2: TOF, 3: Q-Exactive
 
 params.msgfplus_split_input = 10000     // split input mzMLs into chunks of this size, 0 to disable
+params.msgfplus_merge_mem_gb = 16       // memory for merging PSMs, used in merge_psms process
 params.msgfplus_split_fasta = 0         // split the fasta into this many chunks, 0 to disable
 
 params.msgfplus_psm_id_pattern = "(.*)"
@@ -177,7 +178,7 @@ process build_msgfplus_index {
 
 process merge_psms {
     cpus 2
-    memory { params.msgfplus_mem_gb + " GB" }
+    memory { params.msgfplus_merge_mem_gb + " GB" }
     container { params.python_image }
 
     input:

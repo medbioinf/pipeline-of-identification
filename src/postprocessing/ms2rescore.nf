@@ -4,6 +4,7 @@ nextflow.enable.dsl=2
 params.ms2rescore_threads = 4
 params.ms2rescore_mem = "64 GB"
 params.ms2rescore_model = "HCD"
+params.ms2rescore_chunk_size = 100000
 
 // include filtering from convert_and_enhance_psm_tsv.nf
 include {filter_pin_keep_only_best} from './convert_and_enhance_psm_tsv.nf'
@@ -19,7 +20,7 @@ workflow ms2rescore_workflow {
     searchengine
 
     main:
-    ms2rescore_pre_pins = run_ms2rescore(psm_tsvs_and_mzmls, psm_tsvs, mzmls, psm_id_pattern, spectrum_id_pattern, id_decoy_pattern, params.fragment_tol_da, params.is_timstof)
+    ms2rescore_pre_pins = run_chunked_ms2rescore(psm_tsvs_and_mzmls, psm_tsvs, mzmls, spectrum_id_pattern, params.fragment_tol_da)
     ms2rescore_pins = correct_psm_utils_pins(ms2rescore_pre_pins)
     ms2rescore_onlybest_base_pins = filter_pin_keep_only_best(ms2rescore_pins, searchengine)
 
@@ -51,9 +52,9 @@ process run_ms2rescore {
     
     script:
     rescore_binary = "ms2rescore"
-    //if (is_timstof) {
-    //    rescore_binary = "tims2rescore"
-    //}
+    if (is_timstof) {
+       rescore_binary = "tims2rescore"
+    }
 
     """
     # write the toml file...
@@ -91,6 +92,38 @@ calibration_set_size = 0.15
 ' >> ms2rescore-config.toml
 
     ${rescore_binary} -c ms2rescore-config.toml
+    """
+}
+
+
+
+process run_chunked_ms2rescore {
+    cpus  { params.ms2rescore_threads }
+    memory { params.ms2rescore_mem }
+
+    container { params.python_image }
+    containerOptions { "-v /mnt/data/projects/pipeline-of-identification/bin/ms2pip-model:/mnt/data/ms2pip-model" }
+
+    input:
+    tuple val(psm_utils_tsvs), val(mzml_for_psms)
+    path psm_tsvs
+    path mzmls
+    val spectrum_id_pattern
+    val fragment_tol_da
+    
+    output:
+    path "*.ms2rescore.pin", emit: features_file
+    
+    script:
+    """
+    chunked_ms2rescore.py -psms_file ${psm_utils_tsvs} \
+        -mzml_file ${mzml_for_psms} \
+        -model ${params.ms2rescore_model} -model_dir "/mnt/data/ms2pip-model" \
+        -ms2_tolerance ${fragment_tol_da} \
+        -spectrum_id_pattern '${spectrum_id_pattern}' \
+        -processes ${params.ms2rescore_threads} \
+        -chunk_size ${params.ms2rescore_chunk_size} \
+        -out_file "${psm_utils_tsvs}.ms2rescore.pin"
     """
 }
 
