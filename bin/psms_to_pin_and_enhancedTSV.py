@@ -29,6 +29,7 @@ if __name__ == "__main__":
     searchengine = args.searchengine
 
     decoy_prefix = "DECOY_"
+    decoy_needs_adjustment = False
 
     # read results
     psm_list = read_file(file, filetype="tsv")
@@ -70,10 +71,11 @@ if __name__ == "__main__":
     elif searchengine == "msamanda":
         score_mapping = {
             "score": "amanda_score",
-            "metadata": {
+            "rescoring": {
                 "binom score": "amanda_binom_score",
                 },
         }
+        decoy_needs_adjustment = True
     elif searchengine == "msfragger":
         score_mapping = {
             "score": "neg_ln_msfragger_expect",
@@ -141,7 +143,7 @@ if __name__ == "__main__":
         psm.rescoring_features = rescoring_features
 
         # if decoy is not set -> set it to True (will be adjusted immediately)
-        if psm.is_decoy == None:
+        if psm.is_decoy == None or decoy_needs_adjustment:
             psm.is_decoy = True
         
         # adjust decoys: only mark as decoy, if all proteins are decoys

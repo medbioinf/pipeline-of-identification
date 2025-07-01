@@ -91,7 +91,7 @@
   </BasicSettings>
   <PercolatorSettings>
     <!-- Generate file for percolator; filename is the same as stated in outputfilename with suffix _pin.tsv (default: false) -->
-    <GeneratePInFile>true</GeneratePInFile>
+    <GeneratePInFile>false</GeneratePInFile>
     <!-- automatically run percolator and add qvalues to outputfile, this setting is only available in combination with decoy db generation (default: false) -->
     <RunPercolator>false</RunPercolator>
   </PercolatorSettings>

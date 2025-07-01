@@ -17,6 +17,10 @@ include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
 // 1) ms-convert with "--noindex"
 // 2) sed -i -e 's;<spectrum\(.*\) id="index=\([0-9]*\)\(.*\);<spectrum\1 id="index=\2 scan=\2\3;' filtered.mzML
 
+// TODO:
+// - params "LoadedProteinsAtOnce" adjustable
+// - params "LoadedSpectraAtOnce" adjustable
+
 /**
  * Executes the identification using MSAmanda
  */
@@ -31,13 +35,7 @@ workflow msamanda_identification {
     main:
     msamanda_results = identification_with_msamanda(msamanda_config_file, fasta, mzmls, precursor_tol_ppm, fragment_tol_da)
 
-    // transpose to tuples containing [pin, tsv] files for each mzML 
-    return_files = msamanda_results.msamanda_pin.collect()
-        .concat(msamanda_results.msamanda_mzid.collect())
-        .toList()
-        .transpose()
-    
-    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(msamanda_results.msamanda_mzid, 'mzid', 'msamanda')
+    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(msamanda_results.msamanda_csv, 'msamanda', 'msamanda')
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
     onlybest_pin_files = psm_tsvs_and_pin.onlybest_pin_file
@@ -45,14 +43,14 @@ workflow msamanda_identification {
     pout_files = psm_percolator(pin_files)
     onlybest_pout_files = onlybest_percolator(onlybest_pin_files)
 
-    psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_output.mzid')) + '.mzML'  ] }
+    psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_msamanda.csv')) + '.mzML'  ] }
     ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msamanda_psm_id_pattern, params.msamanda_spectrum_id_pattern, '^DECOY_', 'msamanda')
 
     // perform percolation on MS2Rescore results (both all and onlybest)
     ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins.concat(ms2rescore_pins.ms2rescore_onlybest_base_pins))
 
     publish:
-    return_files >> 'msamanda'
+    msamanda_results.msamanda_csv >> 'msamanda'
     psm_tsvs >> 'msamanda'
     pin_files >> 'msamanda'
     onlybest_pin_files >> 'msamanda'
@@ -76,8 +74,7 @@ process identification_with_msamanda {
     val fragment_tol_da
 
     output:
-    path "*.mzid_pin.tsv", emit: msamanda_pin
-    path "*.mzid", emit: msamanda_mzid
+    path "${mzmls.baseName}_msamanda.csv", emit: msamanda_csv
 
     script:
     """
@@ -92,7 +89,6 @@ process identification_with_msamanda {
     # Optional: -f fileformat       choose 1 for .csv and 2 for .mzid, default value is 1
     # Optional: -o outputfilename   file or folder where the output should be saved, default path is location of Spectrum file
 
-    MSAmanda -s ${mzmls} -d ${fasta} -e adjusted_msamanda_settings.xml -f 2
-    gunzip *.mzid.gz
+    MSAmanda -s ${mzmls} -d ${fasta} -e adjusted_msamanda_settings.xml -f 1 -o ${mzmls.baseName}_msamanda.csv
     """
 }
