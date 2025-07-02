@@ -3,14 +3,14 @@ nextflow.enable.dsl=2
 params.maxquant_image = 'medbioinf/maxquant:v2.6.1.0'
 
 // number of threads used by maxquant
-params.maxquant_threads = 16
+params.maxquant_threads = 4
 params.maxquant_mem = "32 GB"
 
 params.maxquant_psm_id_pattern = ""
 params.maxquant_spectrum_id_pattern = ""
 
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
-include {psm_percolator; psm_percolator as onlybest_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
+include {psm_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
 
 /**
@@ -38,11 +38,8 @@ workflow maxquant_identification {
     psm_tsvs_and_pin = convert_and_enhance_psm_tsv(maxquant_results, 'msms', 'maxquant')
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
-    onlybest_pin_files = psm_tsvs_and_pin.onlybest_pin_file
 
     pout_files = psm_percolator(pin_files)
-    onlybest_pout_files = onlybest_percolator(onlybest_pin_files)
-
 
     if (params.maxquant_psm_id_pattern) {
         psm_id_pattern = params.maxquant_psm_id_pattern
@@ -67,16 +64,14 @@ workflow maxquant_identification {
 
     ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_spectrafiles, psm_tsvs.collect(), process_files.collect(), psm_id_pattern, spectrum_id_pattern, '', 'maxquant')
     
-    // perform percolation on MS2Rescore results (both all and onlybest)
-    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins.concat(ms2rescore_pins.ms2rescore_onlybest_base_pins))
+    // perform percolation on MS2Rescore results
+    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)
 
     publish:
     maxquant_results >> 'maxquant'
     psm_tsvs >> 'maxquant'
     pin_files >> 'maxquant'
-    onlybest_pin_files >> 'maxquant'
     pout_files >> 'maxquant'
-    onlybest_pout_files >> 'maxquant'
     ms2rescore_pins >> 'maxquant'
     ms2rescore_percolator_results >> 'maxquant'
 }
