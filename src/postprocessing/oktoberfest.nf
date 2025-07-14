@@ -11,8 +11,6 @@ params.oktoberfest_irt_mode = "Prosit_2019_irt"
  * @param psm_tsvs_and_mzmls: A tuple containing the PSM utils TSV files and the mzML files for the PSMs.
  * @param psm_tsvs: The PSM TSV files.
  * @param mzmls: The mzML files. 
- * @param fragment_tol: The fragment tolerance for the rescoring.
- * @param fragment_tol_unit: The unit of the fragment tolerance (e.g., "da" for Dalton).
  *
  * @return: The oktoberfest rescored PSMs in TSV format.
  */
@@ -21,11 +19,9 @@ workflow oktoberfest_rescore_workflow {
     psm_tsvs_and_mzmls
     psm_tsvs
     mzmls
-    fragment_tol
-    fragment_tol_unit
 
     main:
-    oktoberfest_pins = run_oktoberfest_feature_gen(psm_tsvs_and_mzmls, psm_tsvs, mzmls, fragment_tol, fragment_tol_unit)
+    oktoberfest_pins = run_oktoberfest_feature_gen(psm_tsvs_and_mzmls, psm_tsvs, mzmls, params.fragment_tol_da)
 
     emit:
     oktoberfest_pins
@@ -35,10 +31,9 @@ workflow oktoberfest_rescore_workflow {
  * @param psm_tsvs_and_mzmls: A tuple containing the PSM utils TSV files and the mzML files for the PSMs.
  * @param psm_tsvs: The PSM TSV files.
  * @param mzmls: The mzML files. 
- * @param fragment_tol: The fragment tolerance for the rescoring.
- * @param fragment_tol_unit: The unit of the fragment tolerance (e.g., "da" for Dalton).
+ * @param fragment_tol_da: The fragment tolerance for the rescoring.
  * 
- * @return: The oktoberfest rescored PSMs in TSV format.
+ * @return The oktoberfest rescored PSMs in TSV format.
  */
 process run_oktoberfest_feature_gen {
     cpus 1
@@ -50,11 +45,10 @@ process run_oktoberfest_feature_gen {
     tuple val(psm_utils_tsvs), val(mzml_for_psms)
     path psm_tsvs
     path mzmls
-    val fragment_tol
-    val fragment_tol_unit
+    val fragment_tol_da
     
     output:
-    path "oktoberfest.features.tsv"
+    path "${psm_utils_tsvs.baseName}.features.tsv"
     
     script:
     """
@@ -63,11 +57,12 @@ process run_oktoberfest_feature_gen {
         -psms-file ${psm_utils_tsvs} \
         -spectra-file ${mzml_for_psms} \
         -intensity-model ${params.oktoberfest_intensity_model} \
-        -irt-model ${params.oktoberfest_irt_mode} \
-        -mass-tolerance ${fragment_tol} \
-        -mass-tolerance-unit da
+        -irt-model ${params.oktoberfest_irt_modeö} \
+        -mass-tolerance ${fragment_tol_da} \
+        -mass-tolerance-unit da \
+        -is-timstof ${params.is_timstof} \
 
-    mv ./oktoberfest_out/results/none/rescore.tab oktoberfest.features.tsv
+    mv ./oktoberfest_out/results/none/rescore.tab "${psm_utils_tsvs.baseName}.features.tsv"
 
     // Clean up the output directory
     rm -r oktoberfest_out
