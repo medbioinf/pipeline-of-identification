@@ -10,7 +10,7 @@ params.maxquant_psm_id_pattern = ""
 params.maxquant_spectrum_id_pattern = ""
 
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
-include {psm_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
+include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
 
 /**
@@ -63,9 +63,11 @@ workflow maxquant_identification {
     }
 
     ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_spectrafiles, psm_tsvs.collect(), process_files.collect(), psm_id_pattern, spectrum_id_pattern, '', 'maxquant')
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.fragment_tol_da)
     
-    // perform percolation on MS2Rescore results
+    // perform percolation
     ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)
+    oktoberfest_percolator_results = oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins))
 
     publish:
     maxquant_results >> 'maxquant'
@@ -74,6 +76,8 @@ workflow maxquant_identification {
     pout_files >> 'maxquant'
     ms2rescore_pins >> 'maxquant'
     ms2rescore_percolator_results >> 'maxquant'
+    oktoberfest_pins >> 'maxquant'
+    oktoberfest_percolator_results >> 'maxquant'
 }
 
 
