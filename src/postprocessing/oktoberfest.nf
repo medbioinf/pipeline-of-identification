@@ -3,7 +3,7 @@ nextflow.enable.dsl=2
 // parameters for oktoberfest
 params.oktoberfest_memory = "64 GB"
 params.oktoberfest_intensity_model = "Prosit_2020_intensity_HCD"
-params.oktoberfest_irt_mode = "Prosit_2019_irt"
+params.oktoberfest_irt_model = "Prosit_2019_irt"
 
 /**
  * Runs oktoberfest rescoring for the given PSMs and mzML files.
@@ -21,7 +21,9 @@ workflow oktoberfest_rescore_workflow {
     mzmls
 
     main:
-    oktoberfest_pins = run_oktoberfest_feature_gen(psm_tsvs_and_mzmls, psm_tsvs, mzmls, params.fragment_tol_da)
+    oktoberfest_features = run_oktoberfest_feature_gen(psm_tsvs_and_mzmls, psm_tsvs, mzmls, params.fragment_tol_da)
+    oktoberfest_pins = oktoberfest_features_to_pin(oktoberfest_features)
+
 
     emit:
     oktoberfest_pins
@@ -57,7 +59,7 @@ process run_oktoberfest_feature_gen {
         -psms-file ${psm_utils_tsvs} \
         -spectra-file ${mzml_for_psms} \
         -intensity-model ${params.oktoberfest_intensity_model} \
-        -irt-model ${params.oktoberfest_irt_modeö} \
+        -irt-model ${params.oktoberfest_irt_model} \
         -mass-tolerance ${fragment_tol_da} \
         -mass-tolerance-unit da \
         -is-timstof ${params.is_timstof} \
@@ -66,5 +68,30 @@ process run_oktoberfest_feature_gen {
 
     // Clean up the output directory
     rm -r oktoberfest_out
+    """
+}
+
+/**
+ * @param okt_features_tsv: Oktoberfest feature file.
+ * 
+ * @return Oktoberfest feature file in PIN format ready to use with percolator.
+ */
+process oktoberfest_features_to_pin {
+    cpus 1
+    memory { params.oktoberfest_memory }
+
+    container { params.python_image }
+
+    input:
+    path okt_features_tsv
+
+    output:
+    path "${okt_features_tsv.baseName}.oktoberfest.pin"
+
+    script:
+    """
+    oktoberfest_feature_to_pin.py \
+        -features-file ${okt_features_tsv} \
+        -out-folder ./{okt_features_tsv.baseName}.oktoberfest.pin
     """
 }

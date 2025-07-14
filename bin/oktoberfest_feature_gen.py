@@ -2,7 +2,7 @@
 
 """
 Generates features for PSM-rescoring using Oktoberfest.
-The rescoring itself is suppresed by setting an unknown FDR estimation method.s
+The rescoring itself is suppresed by setting an unknown FDR estimation method.
 """
 
 import argparse
@@ -101,7 +101,7 @@ def main():
     Generates features for PSM-rescoring using Oktoberfest.
     The rescoring itself is suppresed by setting an unknown FDR estimation method.
 
-    The esulting features can be found as `<output_folder>/none/rescore.tab`
+    The resulting features can be found as `<output_folder>/none/rescore.tab`
     """
 
     args = argparse_setup()
