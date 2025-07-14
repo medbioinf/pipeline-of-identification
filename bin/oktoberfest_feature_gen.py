@@ -151,6 +151,7 @@ def main():
     # PEPTIDE_LENGTH
     oktoberfest_df["PEPTIDE_LENGTH"] = [len(psm.peptidoform.sequence) for psm in psms]
 
+    # free up some memory
     del psms
 
     psms_df = pd.read_csv(args.psms_file, sep="\t")
@@ -172,6 +173,10 @@ def main():
         sep=",",
         index=False,
     )
+
+    # free up some more memory as the dataframe is read fromt disk again
+    del psms_df
+    del oktoberfest_df
 
     # create the config file
     config_dict = copy.deepcopy(ok.utils.example_configs.RESCORING)
