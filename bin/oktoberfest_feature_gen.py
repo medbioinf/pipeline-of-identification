@@ -22,6 +22,31 @@ OKTOBERFEST_UNKNOWN_FDR_ESTIMATION_METHOD = 'f{config.fdr_estimation_method} is 
 There is a typo in the oktberfest code, as it is not substituting the f-string correctly.
 """
 
+def parse_str_bool(value: str) -> bool:
+    """
+    Parses a string argument to a boolean value.
+
+    Arguments
+    ---------
+    value : str
+        The string value to parse. Accepts 'true', 'false', '1', '
+
+    Returns
+    -------
+    bool
+        Returns True for 'true' or '1', and False for 'false' or '
+
+    Raises
+    ------
+    ValueError
+        If the value is not a valid boolean representation.
+    """
+    if value.lower() in ['true', '1']:
+        return True
+    elif value.lower() in ['false', '0']:
+        return False
+    else:
+        raise ValueError(f"Invalid boolean value: {value}")
 
 def argparse_setup() -> argparse.Namespace:
     """
@@ -59,11 +84,9 @@ def argparse_setup() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "-spectra-file-type",
-        help=".d|raw|mzml",
-        type=str,
-        choices=["d", "raw", "mzml"],
-        default="mzml",
+        "-is-timstof",
+        help="If true, the spectra file type is set to 'd' (for timsTOF); otherwise, it defaults to 'mzml'",
+        type=parse_str_bool
     )
 
     parser.add_argument(
@@ -166,8 +189,8 @@ def main():
     config_dict["inputs"]["search_results"] = str(oktoberfest_input_csv_path)
     config_dict["inputs"]["search_results_type"] = "Internal"
     config_dict["inputs"]["spectra"] = "./"
-    config_dict["inputs"]["spectra_type"] = args.spectra_file_type
-    # resocring params
+    config_dict["inputs"]["spectra_type"] = "d" if args.is_timstof else "mzml"
+    # resocreing params
     # deliberately set to NONE, which will cause Oktoberfest to shut down before rescoring
     # by raising a ValueError which we can catch later.
     # This has the effect, that the generated features
