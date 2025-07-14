@@ -112,9 +112,6 @@ def main():
     # PRECURSOR_CHARGE
     oktoberfest_df["PRECURSOR_CHARGE"] = [psm.get_precursor_charge() for psm in psms]
 
-    # SCAN_EVENT_NUMBER
-    # TODO: Some search engines do not provide this information, skipt it entirely?
-
     # MASS
     oktoberfest_df["MASS"] = [psm.peptidoform.theoretical_mass for psm in psms]
 
