@@ -18,7 +18,7 @@ params.msgfplus_psm_id_pattern = "(.*)"
 params.msgfplus_spectrum_id_pattern = '(.*)'
 
 include {convert_chunked_result_to_psm_utils; enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
-include {psm_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
+include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
 
 include {split_mzml_into_chunks} from '../preprocess/convert_to_mzml.nf'
@@ -91,9 +91,11 @@ workflow msgfplus_identification {
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
     ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msgfplus_psm_id_pattern, params.msgfplus_spectrum_id_pattern, '^DECOY_', 'msgfplus')
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.fragment_tol_da)
 
-    // perform percolation on MS2Rescore results
+    // perform percolation
     ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)
+    oktoberfest_percolator_results = oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins))
 
     publish:
     fasta_merged_results.map{ it -> it[1] } >> 'msgfplus'
@@ -102,6 +104,8 @@ workflow msgfplus_identification {
     pout_files >> 'msgfplus'
     ms2rescore_pins >> 'msgfplus'
     ms2rescore_percolator_results >> 'msgfplus'
+    oktoberfest_pins >> 'msgfplus'
+    oktoberfest_percolator_results >> 'msgfplus'
 }
 
 process identification_with_msgfplus {
