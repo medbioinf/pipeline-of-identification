@@ -94,7 +94,7 @@ def main():
     oktoberfest_df = pd.DataFrame()
 
     # RAW_FILE,
-    oktoberfest_df["RAW_FILE"] = [args.mzml_file.stem] * len(psms)
+    oktoberfest_df["RAW_FILE"] = [args.spectra_file.stem] * len(psms)
 
     # SCAN_NUMBER
     oktoberfest_df["SCAN_NUMBER"] = [psm.spectrum_id for psm in psms]
