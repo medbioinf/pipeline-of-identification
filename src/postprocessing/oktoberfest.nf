@@ -66,7 +66,7 @@ process run_oktoberfest_feature_gen {
 
     mv ./oktoberfest_out/results/none/rescore.tab "${psm_utils_tsvs.baseName}.features.tsv"
 
-    // Clean up the output directory
+    # Clean up the output directory
     rm -r oktoberfest_out
     """
 }
