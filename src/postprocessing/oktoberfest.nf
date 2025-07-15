@@ -86,12 +86,12 @@ process oktoberfest_features_to_pin {
     path okt_features_tsv
 
     output:
-    path "${okt_features_tsv}.oktoberfest.pin"
+    path "${okt_features_tsv.baseName}.oktoberfest.pin"
 
     script:
     """
     oktoberfest_feature_to_pin.py \
-        -features-file ${okt_features_tsv} \
-        -out-folder ./{okt_features_tsv}.oktoberfest.pin
+        -in-file ${okt_features_tsv} \
+        -out-file ./${okt_features_tsv.baseName}.oktoberfest.pin
     """
 }
