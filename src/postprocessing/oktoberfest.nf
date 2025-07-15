@@ -41,7 +41,7 @@ process run_oktoberfest_feature_gen {
     cpus 1
     memory { params.oktoberfest_memory }
 
-    container { params.python_image }
+    container { params.oktoberfest_image }
 
     input:
     tuple val(psm_utils_tsvs), val(mzml_for_psms)
@@ -80,7 +80,7 @@ process oktoberfest_features_to_pin {
     cpus 1
     memory { params.oktoberfest_memory }
 
-    container { params.python_image }
+    container { params.oktoberfest_image }
 
     input:
     path okt_features_tsv

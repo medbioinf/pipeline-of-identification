@@ -4,6 +4,7 @@ nextflow.preview.output = true
 
 // default python image
 params.python_image = 'ghcr.io/medbioinf/pipeline-of-identification:latest'
+params.oktoberfest_image = 'medbioinf/oktoberfest'
 
 // parameters set by the command line
 params.raw_files = ''
