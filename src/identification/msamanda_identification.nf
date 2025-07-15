@@ -12,6 +12,7 @@ params.msamanda_spectrum_id_pattern = '(.*)'
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
 include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
+include {oktoberfest_rescore_workflow} from '../postprocessing/oktoberfest.nf'
 
 // msamanda needs explicit "scan=" in the id of a scan (not there in e.g. TimsTOF converted mzML data)
 // 1) ms-convert with "--noindex"
@@ -43,7 +44,7 @@ workflow msamanda_identification {
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_msamanda.csv')) + '.mzML'  ] }
     ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msamanda_psm_id_pattern, params.msamanda_spectrum_id_pattern, '^DECOY_', 'msamanda')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.fragment_tol_da)
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect())
 
     // perform percolation
     ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)
