@@ -50,7 +50,7 @@ process run_oktoberfest_feature_gen {
     val fragment_tol_da
     
     output:
-    path "${psm_utils_tsvs.baseName}.features.tsv"
+    path "${psm_utils_tsvs}.features.tsv"
     
     script:
     """
@@ -64,7 +64,7 @@ process run_oktoberfest_feature_gen {
         -mass-tolerance-unit da \
         -is-timstof ${params.is_timstof} \
 
-    mv ./oktoberfest_out/results/none/rescore.tab "${psm_utils_tsvs.baseName}.features.tsv"
+    mv ./oktoberfest_out/results/none/rescore.tab "${psm_utils_tsvs}.features.tsv"
 
     # Clean up the output directory
     rm -r oktoberfest_out
@@ -86,12 +86,12 @@ process oktoberfest_features_to_pin {
     path okt_features_tsv
 
     output:
-    path "${okt_features_tsv.baseName}.oktoberfest.pin"
+    path "${okt_features_tsv}.oktoberfest.pin"
 
     script:
     """
     oktoberfest_feature_to_pin.py \
         -features-file ${okt_features_tsv} \
-        -out-folder ./{okt_features_tsv.baseName}.oktoberfest.pin
+        -out-folder ./{okt_features_tsv}.oktoberfest.pin
     """
 }
