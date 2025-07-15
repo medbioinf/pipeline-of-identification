@@ -1,0 +1,2 @@
+oktoberfest~=0.10.0
+psm-utils @ git+https://github.com/julianu/psm_utils.git@pepxml-and-mzid-fixes

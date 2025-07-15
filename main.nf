@@ -4,6 +4,7 @@ nextflow.preview.output = true
 
 // default python image
 params.python_image = 'medbioinf/ident-comparison-python'
+params.oktoberfest_image = 'medbioinf/oktoberfest'
 
 // parameters set by the command line
 params.raw_files = ''
