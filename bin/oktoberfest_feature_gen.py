@@ -11,17 +11,22 @@ import json
 import logging
 from pathlib import Path
 import re
+from time import sleep
 
 import oktoberfest as ok
 from oktoberfest import runner as ok_runner
 import pandas as pd
 import psm_utils
 import psm_utils.io
+import tritonclient
 
 OKTOBERFEST_UNKNOWN_FDR_ESTIMATION_METHOD = 'f{config.fdr_estimation_method} is not a valid rescoring tool, use either "percolator" or "mokapot"'
 """Oktoberfest's error message for unknown FDR estimation methods.
 There is a typo in the oktberfest code, as it is not substituting the f-string correctly.
 """
+
+OKTOBERFEST_RETRIES = 5
+"""Number of retries for the oktberfest job in case of a server error."""
 
 def parse_str_bool(value: str) -> bool:
     """
@@ -226,12 +231,26 @@ def main():
     with config_path.open("w", encoding="utf-8") as json_file:
         json_file.write(json.dumps(config_dict))
 
-    try:
-        ok_runner.run_job(config_path)
-    except ValueError as e:
-        # Catch the specific ValueError raised when "NONE" is used as fdr_estimation
-        if str(e) != OKTOBERFEST_UNKNOWN_FDR_ESTIMATION_METHOD:
-            raise e
+    is_successfull = False
+    for i in range(OKTOBERFEST_RETRIES):
+        try:
+            ok_runner.run_job(config_path)
+        except ValueError as e:
+            # Catch the specific ValueError raised when "NONE" is used as fdr_estimation
+            if str(e) != OKTOBERFEST_UNKNOWN_FDR_ESTIMATION_METHOD:
+                raise e
+            else:
+                is_successfull = True
+                break
+        except tritonclient.utils.InferenceServerException as e:
+            if str(e.status) == "504":
+                logging.error("Koina server not available, retrying in 10 seconds...")
+                sleep(10)
+
+    if not is_successfull:
+        logging.error("Oktoberfest job failed after multiple retries.")
+        exit(101)
+
 
 
 if __name__ == "__main__":
