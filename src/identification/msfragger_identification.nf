@@ -10,6 +10,7 @@ params.msfragger_calibrate = 2
 
 params.msfragger_psm_id_pattern = "(.*)"
 params.msfragger_spectrum_id_pattern = "(.*)"
+params.msfragger_scan_id_pattern = '.*scan=(?P<scan_id>\\d+)*.'
 
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
 include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'
@@ -38,7 +39,7 @@ workflow msfragger_identification {
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.pepXML')) + '.mzML'  ] }
     ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msfragger_psm_id_pattern, params.msfragger_spectrum_id_pattern, '^DECOY_', 'msfragger')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect())
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msfragger_scan_id_pattern)
     
     // perform percolation
     ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)

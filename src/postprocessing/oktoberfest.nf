@@ -11,6 +11,7 @@ params.oktoberfest_irt_model = "Prosit_2019_irt"
  * @param psm_tsvs_and_mzmls: A tuple containing the PSM utils TSV files and the mzML files for the PSMs.
  * @param psm_tsvs: The PSM TSV files.
  * @param mzmls: The mzML files. 
+ * @param scan_id_regex: A regex pattern to extract the scan number from the spectrum ID.
  *
  * @return: The oktoberfest rescored PSMs in TSV format.
  */
@@ -19,9 +20,10 @@ workflow oktoberfest_rescore_workflow {
     psm_tsvs_and_mzmls
     psm_tsvs
     mzmls
+    scan_id_regex
 
     main:
-    oktoberfest_features = run_oktoberfest_feature_gen(psm_tsvs_and_mzmls, psm_tsvs, mzmls, params.fragment_tol_da)
+    oktoberfest_features = run_oktoberfest_feature_gen(psm_tsvs_and_mzmls, psm_tsvs, mzmls, params.fragment_tol_da, scan_id_regex)
     oktoberfest_pins = oktoberfest_features_to_pin(oktoberfest_features)
 
 
@@ -34,6 +36,7 @@ workflow oktoberfest_rescore_workflow {
  * @param psm_tsvs: The PSM TSV files.
  * @param mzmls: The mzML files. 
  * @param fragment_tol_da: The fragment tolerance for the rescoring.
+ * @param scan_id_regex: A regex pattern to extract the scan number from the spectrum ID.
  * 
  * @return The oktoberfest rescored PSMs in TSV format.
  */
@@ -48,6 +51,7 @@ process run_oktoberfest_feature_gen {
     path psm_tsvs
     path mzmls
     val fragment_tol_da
+    val scan_id_regex
     
     output:
     path "${psm_utils_tsvs}.features.tsv"
@@ -63,6 +67,7 @@ process run_oktoberfest_feature_gen {
         -mass-tolerance ${fragment_tol_da} \
         -mass-tolerance-unit da \
         -is-timstof ${params.is_timstof} \
+        -scan-id-regex '${scan_id_regex}' \
 
     mv ./oktoberfest_out/results/none/rescore.tab "${psm_utils_tsvs}.features.tsv"
 
