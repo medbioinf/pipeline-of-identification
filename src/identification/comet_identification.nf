@@ -8,6 +8,7 @@ params.comet_mem = "8 GB"
 
 params.comet_psm_id_pattern = "(.*)"
 params.comet_spectrum_id_pattern = '.*scan=(\\d+)$'
+params.comet_scan_id_pattern = '(?P<scan_id>\\d+)'
 
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
 include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'
@@ -39,7 +40,7 @@ workflow comet_identification {
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
     ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.comet_psm_id_pattern, params.comet_spectrum_id_pattern, '^DECOY_', 'comet')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect())
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.comet_scan_id_pattern)
     
     // perform percolation
     ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)

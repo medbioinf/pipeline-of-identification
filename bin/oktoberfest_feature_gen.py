@@ -10,6 +10,7 @@ import copy
 import json
 import logging
 from pathlib import Path
+import re
 
 import oktoberfest as ok
 from oktoberfest import runner as ok_runner
@@ -47,6 +48,12 @@ def parse_str_bool(value: str) -> bool:
         return False
     else:
         raise ValueError(f"Invalid boolean value: {value}")
+    
+def get_scan_id(spectrum_id: str, scan_id_regex: re.Pattern) -> int:
+    match = scan_id_regex.match(spectrum_id)
+    if not match:
+        raise ValueError(f"Could not extract scan number from spectrum ID: {spectrum_id}")
+    return int(match.group("scan_id"))
 
 def argparse_setup() -> argparse.Namespace:
     """
@@ -90,6 +97,15 @@ def argparse_setup() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "-scan-id-regex",
+        help=(
+            "Regular expression to extract the scan number from the spectrum ID."
+            "Use `scan_id` for the matching group, e.g. `scan=(?P<scan_id>\\d+)`)"
+        ),
+        type=str,
+    )
+
+    parser.add_argument(
         "-out-folder", help="Output folder for ", required=True, type=Path
     )
 
@@ -106,6 +122,7 @@ def main():
 
     args = argparse_setup()
     logging.basicConfig(level=logging.INFO)
+    scan_id_regex = re.compile(args.scan_id_regex)
 
     oktoberfest_input_csv_path = args.psms_file.with_suffix(".oktoberfest.input.csv")
 
@@ -120,7 +137,7 @@ def main():
     oktoberfest_df["RAW_FILE"] = [args.spectra_file.stem] * len(psms)
 
     # SCAN_NUMBER
-    oktoberfest_df["SCAN_NUMBER"] = [psm.spectrum_id for psm in psms]
+    oktoberfest_df["SCAN_NUMBER"] = [get_scan_id(psm.spectrum_id, scan_id_regex) for psm in psms]
 
     # MODIFIED_SEQUENCE
     oktoberfest_df["MODIFIED_SEQUENCE"] = [
