@@ -215,7 +215,7 @@ def main():
     # input params
     config_dict["inputs"]["search_results"] = str(oktoberfest_input_csv_path)
     config_dict["inputs"]["search_results_type"] = "Internal"
-    config_dict["inputs"]["spectra"] = "./"
+    config_dict["inputs"]["spectra"] = str(args.spectra_file)
     config_dict["inputs"]["spectra_type"] = "d" if args.is_timstof else "mzml"
     # resocreing params
     # deliberately set to NONE, which will cause Oktoberfest to shut down before rescoring
