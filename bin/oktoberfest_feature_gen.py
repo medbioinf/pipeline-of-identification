@@ -198,7 +198,7 @@ def main():
 
     # Filter unsupported amino acids
     psms_len = len(oktoberfest_df)
-    oktoberfest_df = oktoberfest_df[~oktoberfest_df["MODIFIED_SEQUENCE"].str.contains("|".join(OKTOBERFEST_UNSUPPORTED_AMINO_ACIDS), regex=True)]
+    oktoberfest_df = oktoberfest_df[~oktoberfest_df["SEQUENCE"].str.contains("|".join(OKTOBERFEST_UNSUPPORTED_AMINO_ACIDS), regex=True)]
     if len(oktoberfest_df) < psms_len:
         logging.warning(
             f"Removed {psms_len - len(oktoberfest_df)} PSMs with unsupported amino acids: {OKTOBERFEST_UNSUPPORTED_AMINO_ACIDS}"
