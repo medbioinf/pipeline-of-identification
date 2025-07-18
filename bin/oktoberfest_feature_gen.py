@@ -28,6 +28,9 @@ There is a typo in the oktberfest code, as it is not substituting the f-string c
 OKTOBERFEST_RETRIES = 5
 """Number of retries for the oktberfest job in case of a server error."""
 
+OKTOBERFEST_UNSUPPORTED_AMINO_ACIDS = {"U", "O"}
+"""According to documentation, Oktoberfest does not support the amino acids U and O."""
+
 def parse_str_bool(value: str) -> bool:
     """
     Parses a string argument to a boolean value.
@@ -190,14 +193,37 @@ def main():
     for rescoring_col in present_rescoring_cols:
         oktoberfest_df[rescoring_col] = psms_df[rescoring_col]
 
+    # free up some more memory as the dataframe is read fromt disk again
+    del psms_df
+
+    # Filter unsupported amino acids
+    psms_len = len(oktoberfest_df)
+    oktoberfest_df = oktoberfest_df[~oktoberfest_df["MODIFIED_SEQUENCE"].str.contains("|".join(OKTOBERFEST_UNSUPPORTED_AMINO_ACIDS), regex=True)]
+    if len(oktoberfest_df) < psms_len:
+        logging.warning(
+            f"Removed {psms_len - len(oktoberfest_df)} PSMs with unsupported amino acids: {OKTOBERFEST_UNSUPPORTED_AMINO_ACIDS}"
+        )
+
+    # Filter peptide length > 30
+    psms_len = len(oktoberfest_df)
+    oktoberfest_df = oktoberfest_df[oktoberfest_df["PEPTIDE_LENGTH"] <= 30]
+    if len(oktoberfest_df) < psms_len:
+        logging.warning(
+            f"Removed {psms_len - len(oktoberfest_df)} PSMs with peptide length > 30"
+        )
+
+    # Some search engines do not provide protein accessions for decoys.
+    # In this case, we set the PROTEINS column to the `PEP_y<MODIFIED_SEQUENCE>` like in the Oktberfest docs.
+    oktoberfest_df["PROTEINS"].replace("", pd.NA, inplace=True)
+    oktoberfest_df["PROTEINS"].fillna("PEP_" + oktoberfest_df["MODIFIED_SEQUENCE"], inplace=True)
+
     oktoberfest_df.to_csv(
         oktoberfest_input_csv_path,
         sep=",",
         index=False,
     )
 
-    # free up some more memory as the dataframe is read fromt disk again
-    del psms_df
+    # free up more memory
     del oktoberfest_df
 
     # create the config file
