@@ -7,6 +7,7 @@ The rescoring itself is suppresed by setting an unknown FDR estimation method.
 
 import argparse
 import copy
+from functools import reduce
 import json
 import logging
 from pathlib import Path
@@ -30,6 +31,13 @@ OKTOBERFEST_RETRIES = 5
 
 OKTOBERFEST_UNSUPPORTED_AMINO_ACIDS = {"U", "O"}
 """According to documentation, Oktoberfest does not support the amino acids U and O."""
+
+OKTOBERFEST_MODIFICATION_REPLACEMENTS = [
+    ("C[UNIMOD:Carbamidomethyl]", "C[UNIMOD:4]"),
+    ("C-[UNIMOD:Carbamidomethyl]", "C[UNIMOD:4]"), # MaxQant-specific if C is last in sequence, PSM is annotated with C- instead of C
+    ("M[UNIMOD:Oxidation]", "M[UNIMOD:35]"),
+    ("M-[UNIMOD:Oxidation]", "M[UNIMOD:35]"), # MaxQant-specific if M is last in sequence, PSM is annotated with M- instead of M
+]
 
 def parse_str_bool(value: str) -> bool:
     """
@@ -151,9 +159,12 @@ def main():
     oktoberfest_df["MODIFIED_SEQUENCE"] = [
         psm.peptidoform.modified_sequence for psm in psms
     ]
+    # sequentially apply the replacements using functools.reduce
     oktoberfest_df["MODIFIED_SEQUENCE"] = oktoberfest_df["MODIFIED_SEQUENCE"].apply(
-        lambda x: x.replace("[UNIMOD:Carbamidomethyl]", "[UNIMOD:4]").replace(
-            "[UNIMOD:Oxidation]", "[UNIMOD:35]"
+        lambda seq: reduce(
+            lambda seq_x, repl: seq_x.replace(repl[0], repl[1]), # lambda to replace
+            OKTOBERFEST_MODIFICATION_REPLACEMENTS, # replacements
+            seq # starting with the sequences as stated in the PSMs file
         )
     )
 
@@ -216,7 +227,6 @@ def main():
     # In this case, we set the PROTEINS column to the `PEP_y<MODIFIED_SEQUENCE>` like in the Oktberfest docs.
     oktoberfest_df["PROTEINS"].replace("", pd.NA, inplace=True)
     oktoberfest_df["PROTEINS"].fillna("PEP_" + oktoberfest_df["MODIFIED_SEQUENCE"], inplace=True)
-
     oktoberfest_df.to_csv(
         oktoberfest_input_csv_path,
         sep=",",
