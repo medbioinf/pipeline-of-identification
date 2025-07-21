@@ -66,6 +66,20 @@ def parse_str_bool(value: str) -> bool:
         raise ValueError(f"Invalid boolean value: {value}")
     
 def get_scan_id(spectrum_id: str, scan_id_regex: re.Pattern) -> int:
+    """
+    Using the provided regex to extract the scan number from the spectrum ID.
+    Arguments
+    ---------
+    spectrum_id : str
+        The spectrum ID from which to extract the scan number.
+    scan_id_regex : re.Pattern
+        A compiled regular expression pattern to match the scan number. 
+    
+    Returns
+    -------
+    int
+        The extracted scan number as an integer.
+    """
     match = scan_id_regex.match(spectrum_id)
     if not match:
         raise ValueError(f"Could not extract scan number from spectrum ID: {spectrum_id}")
