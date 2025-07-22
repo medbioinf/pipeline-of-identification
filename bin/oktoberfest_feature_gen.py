@@ -309,14 +309,6 @@ def main():
             "Removed %i PSMs with unsupported amino acids: %s", psms_len - len(oktoberfest_df), OKTOBERFEST_UNSUPPORTED_AMINO_ACIDS
         )
 
-    # Filter peptide length > 30
-    psms_len = len(oktoberfest_df)
-    oktoberfest_df = oktoberfest_df[oktoberfest_df["PEPTIDE_LENGTH"] <= 30]
-    if len(oktoberfest_df) < psms_len:
-        logging.warning(
-            "Removed %i PSMs with peptide length > 30", psms_len - len(oktoberfest_df)
-        )
-
     # Some search engines do not provide protein accessions for decoys.
     # In this case, we set the PROTEINS column to the `PEP_<MODIFIED_SEQUENCE>` like in the ms2rescore.
     oktoberfest_df.replace({"PROTEINS": ""}, pd.NA, inplace=True)
