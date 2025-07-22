@@ -318,7 +318,7 @@ def main():
         )
 
     # Some search engines do not provide protein accessions for decoys.
-    # In this case, we set the PROTEINS column to the `PEP_y<MODIFIED_SEQUENCE>` like in the Oktberfest docs.
+    # In this case, we set the PROTEINS column to the `PEP_<MODIFIED_SEQUENCE>` like in the ms2rescore.
     oktoberfest_df.replace({"PROTEINS": ""}, pd.NA, inplace=True)
     oktoberfest_df.fillna({"PROTEINS": "PEP_" + oktoberfest_df["MODIFIED_SEQUENCE"]}, inplace=True)
     oktoberfest_df.to_csv(
