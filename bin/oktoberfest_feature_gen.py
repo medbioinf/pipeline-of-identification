@@ -13,18 +13,18 @@ import logging
 from pathlib import Path
 import re
 from time import sleep
+from typing import Union
 
 import oktoberfest as ok
-from oktoberfest import runner as ok_runner
+from oktoberfest.runner import _preprocess, _ce_calib, _refinement_learn, _calculate_features
+from oktoberfest.utils import Config, JobPool, ProcessStep
+from oktoberfest import rescore as ok_re
+from oktoberfest import preprocessing as ok_pp
 import pandas as pd
 import psm_utils
 import psm_utils.io
 import tritonclient
 
-OKTOBERFEST_UNKNOWN_FDR_ESTIMATION_METHOD = 'f{config.fdr_estimation_method} is not a valid rescoring tool, use either "percolator" or "mokapot"'
-"""Oktoberfest's error message for unknown FDR estimation methods.
-There is a typo in the oktberfest code, as it is not substituting the f-string correctly.
-"""
 
 OKTOBERFEST_RETRIES = 5
 """Number of retries for the oktberfest job in case of a server error."""
@@ -142,6 +142,86 @@ def argparse_setup() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def feature_generation(config_path: Union[str, Path]):
+    """
+    Parts of Oktoberfest's [run_rescore-function without the rescoring step](https://github.com/wilhelm-lab/oktoberfest/blob/ce8d909ebf64aaaf9c0eebcc2bb33b9c4492ae90/oktoberfest/runner.py#L1238-L1312)
+    with some renamed dependencies to avoid conflicts e.g. `re` => `ok_re` (for Oktoberfests rescoring module) to avoid conflicts with the built-in `re` module.
+
+    Arguments
+    ---------
+    config_path : Union[str, Path]
+        Path to the configuration file for Oktoberfest. This file should contain all necessary parameters for the
+    """
+    config = Config()
+    config.read(config_path)
+    config.check()
+
+    # load spectra file names
+    spectra_files = ok_pp.list_spectra(input_dir=config.spectra, input_format=config.spectra_type)
+
+    proc_dir = config.output / "proc"
+    proc_dir.mkdir(parents=True, exist_ok=True)
+
+    spectra_files = _preprocess(spectra_files, config)
+
+    # TODO is this the most elegant way to multi-thread CE calibration before running refinement learning?
+    # Should we store the returned libraries and pass them to _calculate_features and _refinement_learn instead of
+    # _ce_calib returning cached outputs?
+    if config.num_threads > 1:
+        processing_pool = JobPool(processes=config.num_threads)
+        for spectra_file in spectra_files:
+            _ = processing_pool.apply_async(_ce_calib, [spectra_file, config])
+        processing_pool.check_pool()
+    else:
+        for spectra_file in spectra_files:
+            _ = _ce_calib(spectra_file, config)
+
+    if config.do_refinement_learning:
+        _refinement_learn(spectra_files, config)
+
+    if config.num_threads > 1:
+        processing_pool = JobPool(processes=config.num_threads)
+        for spectra_file in spectra_files:
+            if "xl" in config.models["intensity"].lower():
+                if "cms2" in config.models["intensity"].lower():
+                    cms2 = True
+                else:
+                    cms2 = False
+                processing_pool.apply_async(_calculate_features, [spectra_file, config], xl=True, cms2=cms2)
+            else:
+                processing_pool.apply_async(_calculate_features, [spectra_file, config])
+        processing_pool.check_pool()
+    else:
+        for spectra_file in spectra_files:
+            if "xl" in config.models["intensity"].lower():
+                if "cms2" in config.models["intensity"].lower():
+                    cms2 = True
+                else:
+                    cms2 = False
+                _calculate_features(spectra_file, config, xl=True, cms2=cms2)
+            else:
+                _calculate_features(spectra_file, config)
+
+    # prepare rescoring
+
+    fdr_dir = config.output / "results" / config.fdr_estimation_method
+    original_tab_files = [fdr_dir / spectra_file.with_suffix(".original.tab").name for spectra_file in spectra_files]
+    rescore_tab_files = [fdr_dir / spectra_file.with_suffix(".rescore.tab").name for spectra_file in spectra_files]
+
+    prepare_tab_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_original")
+    prepare_tab_rescore_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_prosit")
+
+    if not prepare_tab_original_step.is_done():
+        logging.info("Merging input tab files for rescoring without peptide property prediction")
+        ok_re.merge_input(tab_files=original_tab_files, output_file=fdr_dir / "original.tab")
+        prepare_tab_original_step.mark_done()
+
+    if not prepare_tab_rescore_step.is_done():
+        logging.info("Merging input tab files for rescoring with peptide property prediction")
+        ok_re.merge_input(tab_files=rescore_tab_files, output_file=fdr_dir / "rescore.tab")
+        prepare_tab_rescore_step.mark_done()
+
+
 def main():
     """
     Generates features for PSM-rescoring using Oktoberfest.
@@ -226,7 +306,7 @@ def main():
     oktoberfest_df = oktoberfest_df[~oktoberfest_df["SEQUENCE"].str.contains("|".join(OKTOBERFEST_UNSUPPORTED_AMINO_ACIDS), regex=True)]
     if len(oktoberfest_df) < psms_len:
         logging.warning(
-            f"Removed {psms_len - len(oktoberfest_df)} PSMs with unsupported amino acids: {OKTOBERFEST_UNSUPPORTED_AMINO_ACIDS}"
+            "Removed %i PSMs with unsupported amino acids: %s", psms_len - len(oktoberfest_df), OKTOBERFEST_UNSUPPORTED_AMINO_ACIDS
         )
 
     # Filter peptide length > 30
@@ -234,7 +314,7 @@ def main():
     oktoberfest_df = oktoberfest_df[oktoberfest_df["PEPTIDE_LENGTH"] <= 30]
     if len(oktoberfest_df) < psms_len:
         logging.warning(
-            f"Removed {psms_len - len(oktoberfest_df)} PSMs with peptide length > 30"
+            "Removed %i PSMs with peptide length > 30", psms_len - len(oktoberfest_df)
         )
 
     # Some search engines do not provide protein accessions for decoys.
@@ -267,10 +347,7 @@ def main():
     config_dict["inputs"]["search_results_type"] = "Internal"
     config_dict["inputs"]["spectra"] = str(args.spectra_file)
     config_dict["inputs"]["spectra_type"] = "d" if args.is_timstof else "mzml"
-    # resocreing params
-    # deliberately set to NONE, which will cause Oktoberfest to shut down before rescoring
-    # by raising a ValueError which we can catch later.
-    # This has the effect, that the generated features
+    # Setting this to none has the effect, that the generated features
     # are stored in the subfolder `results/none` of the output folder.
     config_dict["fdr_estimation_method"] = "NONE"
     config_dict["quantification"] = False
@@ -282,16 +359,10 @@ def main():
         json_file.write(json.dumps(config_dict))
 
     is_successfull = False
-    for i in range(OKTOBERFEST_RETRIES):
+    for _ in range(OKTOBERFEST_RETRIES):
         try:
-            ok_runner.run_job(config_path)
-        except ValueError as e:
-            # Catch the specific ValueError raised when "NONE" is used as fdr_estimation
-            if str(e) != OKTOBERFEST_UNKNOWN_FDR_ESTIMATION_METHOD:
-                raise e
-            else:
-                is_successfull = True
-                break
+            feature_generation(config_path)
+            is_successfull = True
         except tritonclient.utils.InferenceServerException as e:
             if str(e.status) == "504":
                 logging.error("Koina server not available, retrying in 10 seconds...")
@@ -300,7 +371,6 @@ def main():
     if not is_successfull:
         logging.error("Oktoberfest job failed after multiple retries.")
         exit(101)
-
 
 
 if __name__ == "__main__":
