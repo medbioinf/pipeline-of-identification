@@ -15,8 +15,6 @@ env:
 
 jobs:
   build_and_push_docker:
-    if: github.event_name == 'push' || github.event_name == 'release'
-
     runs-on: ubuntu-latest
 
     permissions:
