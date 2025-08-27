@@ -44,6 +44,8 @@ jobs:
             org.opencontainers.image.description=Tools used in the pipeline-of-identification
             org.opencontainers.image.url=${{ github.event.repository.html_url }}
             org.opencontainers.image.source=${{ github.event.repository.html_url }}
+          flavor: | # always generate latest tag
+            latest=true 
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
