@@ -1,5 +1,5 @@
 docker-imgs:
-	docker build -t medbioinf/ident-comparison-python:latest -f docker/python/Dockerfile .
+	docker build --platform linux/amd64 -t medbioinf/ident-comparison-python:latest -f docker/python/Dockerfile .
 
 	docker pull proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses:3.0.25073-842baef
 
