@@ -3,8 +3,11 @@ name: Docker build and push to quay
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
   release:
     types: [ "published" ]
+
 
 env:
   REGISTRY: ghcr.io
@@ -12,6 +15,8 @@ env:
 
 jobs:
   build_and_push_docker:
+    if: github.event_name == 'push' || github.event_name == 'release'
+
     runs-on: ubuntu-latest
 
     permissions:
@@ -44,13 +49,17 @@ jobs:
         with:
           context: .
           file: ./docker/python/Dockerfile
-          push: true
+          #push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          labels: |
+            ${{ steps.meta.outputs.labels }}
+            org.opencontainers.image.description=Tools used in the pipeline-of-identification
+            org.opencontainers.image.version=latest
+          platforms: linux/amd64
       
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
+          push-to-registry: ${{ github.event_name != 'pull_request' }}
