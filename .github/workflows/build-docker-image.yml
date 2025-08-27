@@ -57,11 +57,12 @@ jobs:
           context: .
           file: ./docker/python/Dockerfile
           platforms: linux/amd64
-          push: true   # push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name != 'pull_request' }}   # do not push for pull requests
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
       
       - name: Generate artifact attestation
+        if: ${{ github.event_name != 'pull_request' }}      # do not attest for pull requests
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
