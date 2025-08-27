@@ -47,7 +47,7 @@ jobs:
         with:
           context: .
           file: ./docker/python/Dockerfile
-          #push: ${{ github.event_name != 'pull_request' }}
+          push: true   # push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
             org.opencontainers.image.title=pipeline-of-identification
