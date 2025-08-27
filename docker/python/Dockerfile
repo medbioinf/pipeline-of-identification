@@ -1,29 +1,25 @@
-# AMD64 needed explicitly on ARM as some sofwtare is only available in AMD64
-FROM --platform=amd64 mambaorg/micromamba:2.1.0-ubuntu22.04
+# AMD64 needed explicitly on ARM as some software is only available in AMD64
+FROM mambaorg/micromamba:2.3.1-ubuntu24.04
 
-WORKDIR /home/mambauser
 # Copy backend and environment.yml
-COPY --chown=mambauser:mambauser environment.yml .
-COPY --chown=mambauser:mambauser requirements.txt .
+COPY --chown=mambauser:mambauser environment.yml /home/mambauser/
+COPY --chown=mambauser:mambauser requirements.txt /home/mambauser/
 
+# setup build environment (currently needed for psm-utils forks)
 USER root
-
 RUN apt update \
     && apt install -y libglib2.0-0 build-essential cmake \
     && apt clean
 
+# setup of micromamba
 USER mambauser
 ENV HOME=/home/mambauser
 ENV ENV_NAME=medbioinforub-ident-comparison
+WORKDIR /home/mambauser
 
-RUN echo 'show_banner: false' > ~/.mambarc
-
-RUN micromamba env create -y -f environment.yml \
+RUN echo 'show_banner: false' > ~/.mambarc \
+    && micromamba env create -y -f /home/mambauser/environment.yml \
     && micromamba clean --all --yes
 
-# TODO: remove build-essential
-
-USER root
-# First is necessary for base_image to actvate the conda environment second is entrypoint
-# which adds the python file to PATH
+# entrypoint for micromamba
 ENTRYPOINT [ "/usr/local/bin/_entrypoint.sh"]
