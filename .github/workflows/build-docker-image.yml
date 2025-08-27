@@ -37,6 +37,11 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          labels: |
+            org.opencontainers.image.title=pipeline-of-identification
+            org.opencontainers.image.description=Tools used in the pipeline-of-identification
+            org.opencontainers.image.url=${{ github.event.repository.html_url }}
+            org.opencontainers.image.source=${{ github.event.repository.html_url }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -47,14 +52,10 @@ jobs:
         with:
           context: .
           file: ./docker/python/Dockerfile
+          platforms: linux/amd64
           push: true   # push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
-          labels: |
-            org.opencontainers.image.title=pipeline-of-identification
-            org.opencontainers.image.description=Tools used in the pipeline-of-identification
-            org.opencontainers.image.url=${{ github.event.repository.html_url }}
-            org.opencontainers.image.source=${{ github.event.repository.html_url }}
-          platforms: linux/amd64
+          labels: ${{ steps.meta.outputs.labels }}
       
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
