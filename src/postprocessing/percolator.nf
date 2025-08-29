@@ -1,6 +1,6 @@
 nextflow.enable.dsl=2
 
-params.percolator_image = 'quay.io/medbioinf/percolator:3.6.5'
+params.percolator_image = 'ghcr.io/percolator/percolator:branch-3-08'
 
 // number of threads used by percolator
 params.percolator_threads = 4
