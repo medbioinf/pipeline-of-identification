@@ -9,6 +9,6 @@ dependencies:
   - setuptools
   - git
   - openjdk=21
-  - unzip=6.0
+  - conda-forge::unzip=6.0
   - pip:
     - -r requirements.txt
