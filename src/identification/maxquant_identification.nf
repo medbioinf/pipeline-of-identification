@@ -1,6 +1,6 @@
 nextflow.enable.dsl=2
 
-params.maxquant_image = 'medbioinf/maxquant:v2.6.1.0'
+params.maxquant_image = 'quay.io/medbioinf/maxquant:2.6.3.0'
 
 // number of threads used by maxquant
 params.maxquant_threads = 4
