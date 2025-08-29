@@ -1,7 +1,8 @@
 nextflow.enable.dsl=2
 
 params.msconvert_image = 'proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses:3.0.25073-842baef'
-
+params.tdf2mzml_image = 'quay.io/medbioinf/tdf2mzml:0.4'
+params.tdf2mzml_threads = 8
 
 workflow convert_to_mzml {
     take:
@@ -9,7 +10,8 @@ workflow convert_to_mzml {
 
     main:
     if (params.is_timstof) {
-        mzml = convert_bruker_d(input_path)
+        mzml_direct_convert = convert_bruker_d(input_path)
+        mzml = adjust_mzML(mzml_direct_convert)
     } else {
         mzml = convert_thermo_raw(input_path)
     }
@@ -23,6 +25,7 @@ workflow convert_to_mzml {
 
 process convert_thermo_raw {
     cpus 2
+    memory "8 GB"
     container { params.msconvert_image }
 
     input:
@@ -38,24 +41,51 @@ process convert_thermo_raw {
 }
 
 process convert_bruker_d {
-    cpus 2
-    container { params.python_image }
+    cpus { params.tdf2mzml_threads }
+    memory "8 GB"
+    container { params.tdf2mzml_image }
 
     input:
-    path input_raw
+    path input_d
 
     output:
-    path "${input_raw.baseName}.mzML"
+    path "${input_d.baseName}.mzML"
 
     script:
     """
-    # here goes the converter...
+    export MKL_NUM_THREADS=${params.tdf2mzml_threads}
+    export NUMEXPR_NUM_THREADS=${params.tdf2mzml_threads}
+    export OMP_NUM_THREADS=${params.tdf2mzml_threads}
 
+    tdf2mzml -i ${input_d} --compression "zlib" -o ${input_d.baseName}.mzML
+    """
+}
+
+process adjust_mzML {
+    cpus 2
+    memory "8 GB"
+    container { params.msconvert_image }
+
+    input:
+    path input_mzML
+
+    output:
+    path "uncompressed/${input_mzML.baseName}.mzML"
+
+    script:
+    """
     # msamanda needs explicit "scan=" in the id of a scan (not there in e.g. TimsTOF converted mzML data)
-    sed -i -e 's/<spectrum\\(.*\\) id="index=\\([0-9]*\\)\\(.*\\)/<spectrum\\1 id="index=\\2 scan=\\2\\3/;s/spectrumRef="\\(.*\\)index=\\([0-9]*\\)\\(.*\\)"/spectrumRef="\\1index=\\2 scan=\\2\\3"/' ${input_raw.baseName}.mzML
+    sed -e 's/<spectrum\\(.*\\) id="index=\\([0-9]*\\)\\(.*\\)/<spectrum\\1 id="index=\\2 scan=\\2\\3/;s/spectrumRef="\\(.*\\)index=\\([0-9]*\\)\\(.*\\)"/spectrumRef="\\1index=\\2 scan=\\2\\3"/' ${input_mzML} > ${input_mzML.baseName}.reindex.mzML
 
     # after this, the mzML index needs to be removed, or just the compression???
-    ## docker run --rm -it -v ./:/data/ proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses:3.0.25073-842baef wine msconvert --mzML -o /data/rem-index --noindex --zlib=off /data/${file};
+    ## docker run --rm -it -v ./:/data/ proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses:3.0.25073-842baef wine msconvert --mzML -o ${input_mzML}.noindex_nocompress.mzML --noindex --zlib=off ${input_mzML};
+
+    # uncompress the mzML with re-named id-tags (this re-calculates also the index, but for X!Tandem it is needed uncompressed anyways)
+    mkdir uncompressed
+    wine msconvert --mzML --zlib=off -o uncompressed --outfile ${input_mzML.baseName}.mzML ${input_mzML.baseName}.reindex.mzML
+    
+    # cleanup
+    rm ${input_mzML.baseName}.reindex.mzML
     """
 }
 
