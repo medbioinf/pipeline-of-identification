@@ -3,7 +3,7 @@ nextflow.enable.dsl=2
 nextflow.preview.output = true
 
 // default python image
-params.python_image = 'medbioinf/ident-comparison-python'
+params.python_image = 'ghcr.io/medbioinf/pipeline-of-identification:latest'
 
 // parameters set by the command line
 params.raw_files = ''
