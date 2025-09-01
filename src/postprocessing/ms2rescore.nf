@@ -45,7 +45,7 @@ process run_chunked_ms2rescore {
     script:
     """
     chunked_ms2rescore.py -psms_file ${psm_utils_tsvs} \
-        -mzml_file ${mzml_for_psms} \
+        -spectra ${mzml_for_psms} \
         -model ${params.ms2rescore_model} -model_dir "/mnt/data/ms2pip-model" \
         -ms2_tolerance ${fragment_tol_da} \
         -spectrum_id_pattern '${spectrum_id_pattern}' \
