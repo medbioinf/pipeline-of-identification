@@ -327,13 +327,13 @@ def main():
 
     # misc
     config_dict["output"] = str(args.out_folder)
-    config_dict["num_threads"] = 1  # Set to 1 for debugging, can be increased later
+    config_dict["numThreads"] = 1  # Set to 1 for debugging, can be increased later
     # mass spec parameters
-    config_dict["mass_tolerance"] = args.mass_tolerance
+    config_dict["massTolerance"] = args.mass_tolerance
     config_dict["unitMassTolerance"] = args.mass_tolerance_unit
     # predicition params
-    config_dict["models"]["irt_model"] = args.irt_model
-    config_dict["models"]["intensity_model"] = args.intensity_model
+    config_dict["models"]["irt"] = args.irt_model
+    config_dict["models"]["intensity"] = args.intensity_model
     # input params
     config_dict["inputs"]["search_results"] = str(oktoberfest_input_csv_path)
     config_dict["inputs"]["search_results_type"] = "Internal"
