@@ -1,6 +1,6 @@
 nextflow.enable.dsl=2
 
-params.openms_image = 'quay.io/medbioinf/openms:3.1.0'
+params.openms_image = 'quay.io/medbioinf/openms:3.4.1'
 
 // number of threads used by maxquant
 params.decoy_database_threads = 4

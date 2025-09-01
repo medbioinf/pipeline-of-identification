@@ -1,9 +1,8 @@
-FROM --platform=amd64 mambaorg/micromamba:2.1.1-ubuntu22.04
+FROM mambaorg/micromamba:2.3.1-ubuntu24.04
 
-WORKDIR /home/mambauser
 # Copy environment.yml and requirements.txt
-COPY --chown=mambauser:mambauser environment.yml .
-COPY --chown=mambauser:mambauser requirements.txt .
+COPY --chown=mambauser:mambauser environment.yml /home/mambauser/
+COPY --chown=mambauser:mambauser requirements.txt /home/mambauser/
 
 # copy over MSFragger bin
 COPY --chown=mambauser:mambauser ./MSFragger-4.2.zip /tmp/
@@ -12,10 +11,10 @@ COPY --chown=mambauser:mambauser ./MSFragger-4.2.zip /tmp/
 USER mambauser
 ENV HOME=/home/mambauser
 ENV ENV_NAME=medbioinforub-msfragger
+WORKDIR /home/mambauser
 
-RUN echo 'show_banner: false' > ~/.mambarc
-
-RUN micromamba env create -y -f environment.yml \
+RUN echo 'show_banner: false' > ~/.mambarc \
+    && micromamba env create -y -f /home/mambauser/environment.yml \
     && micromamba clean --all --yes
 
 # install / unzip MSFragger
