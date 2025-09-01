@@ -13,7 +13,7 @@ from ms2rescore.feature_generators.deeplc import DeepLCFeatureGenerator
 def argparse_setup():
     parser = argparse.ArgumentParser()
     parser.add_argument("-psms_file", help="Input PSMs TSV file", required=True, type=argparse.FileType('r'))
-    parser.add_argument("-mzml_file", help="Corresponding mzML file for PSMs file", required=True, type=argparse.FileType('r'))
+    parser.add_argument("-mzml_file", help="Corresponding mzML file or .d path for PSMs file", required=True, type=str)
 
     parser.add_argument("-model", help="Model for MS2PIP", default="HCD", type=str)
     parser.add_argument("-model_dir", help="Directory to store/find MS2PIP model", default="/mnt/data/ms2pip-model", type=str)
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     psm_filename = args.psms_file.name
-    mzmlfile = args.mzml_file.name
+    mzmlfile = args.mzml_file
 
     model = args.model
     model_dir = args.model_dir
