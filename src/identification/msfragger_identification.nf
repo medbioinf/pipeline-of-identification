@@ -10,7 +10,7 @@ params.msfragger_calibrate = 2
 
 params.msfragger_psm_id_pattern = "(.*)"
 params.msfragger_spectrum_id_pattern = "(.*)"
-params.msfragger_scan_id_pattern = '.*scan=(?P<scan_id>\\d+)*.'
+params.msfragger_scan_id_pattern = '.*scan=(?P<scan_id>\\d+)$'
 
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
 include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'

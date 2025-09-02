@@ -16,7 +16,7 @@ params.msgfplus_split_fasta = 0         // split the fasta into this many chunks
 
 params.msgfplus_psm_id_pattern = "(.*)"
 params.msgfplus_spectrum_id_pattern = '(.*)'
-params.msgfplus_scan_id_pattern = '.*scan=(?P<scan_id>\\d+)*.'
+params.msgfplus_scan_id_pattern = '.*scan=(?P<scan_id>\\d+)$'
 
 include {convert_chunked_result_to_psm_utils; enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
 include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'
