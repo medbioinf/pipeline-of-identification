@@ -71,7 +71,7 @@ workflow maxquant_identification {
     }
 
     ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_spectrafiles, psm_tsvs.collect(), process_files.collect(), psm_id_pattern, spectrum_id_pattern, '', 'maxquant')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_spectrafiles, psm_tsvs.collect(), mzmls.collect(), scan_id_pattern)
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_spectrafiles, psm_tsvs.collect(), process_files.collect(), scan_id_pattern)
     
     // perform percolation
     ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)

@@ -338,7 +338,7 @@ def main():
     config_dict["inputs"]["search_results"] = str(oktoberfest_input_csv_path)
     config_dict["inputs"]["search_results_type"] = "Internal"
     config_dict["inputs"]["spectra"] = str(args.spectra_file)
-    config_dict["inputs"]["spectra_type"] = "d" if args.is_timstof else "mzml"
+    config_dict["inputs"]["spectra_type"] = args.spectra_file.suffix.replace(".", "").lower()
     # Setting this to none has the effect, that the generated features
     # are stored in the subfolder `results/none` of the output folder.
     config_dict["fdr_estimation_method"] = "NONE"
