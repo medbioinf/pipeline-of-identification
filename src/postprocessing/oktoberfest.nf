@@ -68,7 +68,6 @@ process run_oktoberfest_feature_gen {
         -irt-model ${params.oktoberfest_irt_model} \
         -mass-tolerance ${fragment_tol_da} \
         -mass-tolerance-unit da \
-        -is-timstof ${params.is_timstof} \
         -scan-id-regex '${scan_id_regex}' \
 
     mv ./oktoberfest_out/results/none/rescore.tab "${psm_utils_tsvs}.features.tsv"

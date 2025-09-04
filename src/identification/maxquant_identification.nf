@@ -65,13 +65,18 @@ workflow maxquant_identification {
     }
 
     if (params.is_timstof) {
+        // MS2Rescore takes the .d files
         psm_tsvs_and_spectrafiles = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_msms')) + '.d'  ] }
+
+        // oktoberfest needs the mzML files
+        psm_tsvs_and_spectra_oktoberfest = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_msms')) + '.mzML'  ] }
     } else {
         psm_tsvs_and_spectrafiles = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_msms')) + '.mzML'  ] }
+        psm_tsvs_and_spectra_oktoberfest = psm_tsvs_and_spectrafiles
     }
 
     ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_spectrafiles, psm_tsvs.collect(), process_files.collect(), psm_id_pattern, spectrum_id_pattern, '', 'maxquant')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_spectrafiles, psm_tsvs.collect(), process_files.collect(), scan_id_pattern)
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_spectra_oktoberfest, psm_tsvs.collect(), mzmls.collect(), scan_id_pattern)
     
     // perform percolation
     ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)

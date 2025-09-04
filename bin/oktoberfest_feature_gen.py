@@ -121,12 +121,6 @@ def argparse_setup() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "-is-timstof",
-        help="If true, the spectra file type is set to 'd' (for timsTOF); otherwise, it defaults to 'mzml'",
-        type=parse_str_bool
-    )
-
-    parser.add_argument(
         "-scan-id-regex",
         help=(
             "Regular expression to extract the scan number from the spectrum ID."
@@ -338,7 +332,7 @@ def main():
     config_dict["inputs"]["search_results"] = str(oktoberfest_input_csv_path)
     config_dict["inputs"]["search_results_type"] = "Internal"
     config_dict["inputs"]["spectra"] = str(args.spectra_file)
-    config_dict["inputs"]["spectra_type"] = args.spectra_file.suffix.replace(".", "").lower()
+    config_dict["inputs"]["spectra_type"] = "mzml"
     # Setting this to none has the effect, that the generated features
     # are stored in the subfolder `results/none` of the output folder.
     config_dict["fdr_estimation_method"] = "NONE"
