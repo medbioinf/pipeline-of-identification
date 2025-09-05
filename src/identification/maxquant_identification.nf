@@ -8,10 +8,12 @@ params.maxquant_mem = "32 GB"
 
 params.maxquant_psm_id_pattern = ""
 params.maxquant_spectrum_id_pattern = ""
+params.maxquant_scan_id_pattern = ""
 
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
-include {psm_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
+include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
+include {oktoberfest_rescore_workflow} from '../postprocessing/oktoberfest.nf'
 
 /**
  * Executes the identification using MaxQuant
@@ -55,17 +57,30 @@ workflow maxquant_identification {
             spectrum_id_pattern = '.*scan=(\\d+)$'
         }
     }
+    if (params.maxquant_scan_id_pattern) {
+        scan_id_pattern = params.maxquant_scan_id_pattern
+    } else{
+        // no difference between psm TSVs derived from Bruker and Thermo measurments
+        scan_id_pattern = '(?P<scan_id>\\d+)'
+    }
 
     if (params.is_timstof) {
+        // MS2Rescore takes the .d files
         psm_tsvs_and_spectrafiles = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_msms')) + '.d'  ] }
+
+        // oktoberfest needs the mzML files
+        psm_tsvs_and_spectra_oktoberfest = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_msms')) + '.mzML'  ] }
     } else {
         psm_tsvs_and_spectrafiles = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_msms')) + '.mzML'  ] }
+        psm_tsvs_and_spectra_oktoberfest = psm_tsvs_and_spectrafiles
     }
 
     ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_spectrafiles, psm_tsvs.collect(), process_files.collect(), psm_id_pattern, spectrum_id_pattern, '', 'maxquant')
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_spectra_oktoberfest, psm_tsvs.collect(), mzmls.collect(), scan_id_pattern)
     
-    // perform percolation on MS2Rescore results
+    // perform percolation
     ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)
+    oktoberfest_percolator_results = oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins)
 
     publish:
     maxquant_results >> 'maxquant'
@@ -74,6 +89,8 @@ workflow maxquant_identification {
     pout_files >> 'maxquant'
     ms2rescore_pins >> 'maxquant'
     ms2rescore_percolator_results >> 'maxquant'
+    oktoberfest_pins >> 'maxquant'
+    oktoberfest_percolator_results >> 'maxquant'
 }
 
 

@@ -10,10 +10,12 @@ params.sage_prefilter_chunk_size = 0
 
 params.sage_psm_id_pattern = "(.*)"
 params.sage_spectrum_id_pattern = '(.*)'
+params.sage_scan_id_pattern = '.*scan=(?P<scan_id>\\d+)$'
 
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
-include {psm_percolator; psm_percolator as ms2rescore_percolator} from '../postprocessing/percolator.nf'
+include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
+include {oktoberfest_rescore_workflow} from '../postprocessing/oktoberfest.nf'
 
 /**
  * Executes the identification using Sage
@@ -49,9 +51,11 @@ workflow sage_identification {
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.sage')) ] }
     ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.sage_psm_id_pattern, params.sage_spectrum_id_pattern, '^DECOY_', 'sage')
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.sage_scan_id_pattern)
 
-    // perform percolation on MS2Rescore results
+    // perform percolation
     ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)
+    oktoberfest_percolator_results = oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins)
 
     publish:
     return_files >> 'sage'
@@ -60,6 +64,8 @@ workflow sage_identification {
     pout_files >> 'sage'
     ms2rescore_pins >> 'sage'
     ms2rescore_percolator_results >> 'sage'
+    oktoberfest_pins >> 'sage'
+    oktoberfest_percolator_results >> 'sage'
 }
 
 

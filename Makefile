@@ -1,6 +1,6 @@
 docker-imgs:
 	docker pull ghcr.io/medbioinf/pipeline-of-identification:latest
-
+	
 	docker pull proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses:3.0.25073-842baef
 	docker pull quay.io/medbioinf/tdf2mzml:0.4
 	docker pull quay.io/medbioinf/openms:3.4.1
@@ -17,3 +17,5 @@ docker-imgs:
 	docker pull ghcr.io/percolator/percolator:branch-3-08
 
 	docker build --platform linux/amd64 -t medbioinf/msfragger -f docker/msfragger/Dockerfile docker/msfragger/.
+
+	docker build --platform linux/amd64 -t medbioinf/oktoberfest:latest -f docker/oktoberfest/Dockerfile docker/oktoberfest
