@@ -41,25 +41,15 @@ workflow msamanda_identification {
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
 
-    pout_files = psm_percolator(pin_files)
+    psm_percolator(pin_files, 'msamanda')
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_msamanda.csv')) + '.mzML'  ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msamanda_psm_id_pattern, params.msamanda_spectrum_id_pattern, '^DECOY_', 'msamanda')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msamanda_scan_id_pattern)
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msamanda_spectrum_id_pattern, 'msamanda')
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msamanda_scan_id_pattern, 'msamanda')
 
     // perform percolation
-    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)
-    oktoberfest_percolator_results = oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins)
-
-    publish:
-    msamanda_results.msamanda_csv >> 'msamanda'
-    psm_tsvs >> 'msamanda'
-    pin_files >> 'msamanda'
-    pout_files >> 'msamanda'
-    ms2rescore_pins >> 'msamanda'
-    ms2rescore_percolator_results >> 'msamanda'
-    oktoberfest_pins >> 'msamanda'
-    oktoberfest_percolator_results >> 'msamanda'
+    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'msamanda')
+    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'msamanda')
 }
 
 
@@ -67,6 +57,8 @@ process identification_with_msamanda {
     cpus { params.msamanda_threads }
     memory { params.msamanda_mem }
     container { params.msamanda_image }
+
+    publishDir "${params.outdir}/msamanda", mode: 'copy'
 
     input:
     path msamanda_config_file
