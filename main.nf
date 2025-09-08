@@ -1,6 +1,6 @@
-nextflow.enable.dsl=2
-
-nextflow.preview.output = true
+//
+// Nextflow pipeline for peptide identification with multiple search engines and post-processing tools
+//
 
 // default python image
 params.python_image = 'ghcr.io/medbioinf/pipeline-of-identification:latest'
@@ -30,6 +30,7 @@ params.execute_sage = true
 params.execute_xtandem = true
 
 // default parameter files
+params.outdir = './'
 params.comet_params_file = "${baseDir}/config/comet.params"
 params.maxquant_params_file = "${baseDir}/config/mqpar.xml"
 params.msamanda_config_file = "${baseDir}/config/msamanda_settings.xml"
@@ -177,11 +178,6 @@ workflow {
 }
 
 output {
-    'mzmls' {
-        enabled params.keep_mzmls
-        path 'mzmls'
-    }
-
     'comet' {
         enabled params.execute_comet
         path 'comet'
