@@ -22,10 +22,11 @@ workflow oktoberfest_rescore_workflow {
     psm_tsvs
     mzmls
     scan_id_regex
+    searchengine
 
     main:
     oktoberfest_features = run_oktoberfest_feature_gen(psm_tsvs_and_mzmls, psm_tsvs, mzmls, params.fragment_tol_da, scan_id_regex)
-    oktoberfest_pins = oktoberfest_features_to_pin(oktoberfest_features)
+    oktoberfest_pins = oktoberfest_features_to_pin(oktoberfest_features, searchengine)
 
 
     emit:
@@ -88,8 +89,11 @@ process oktoberfest_features_to_pin {
 
     container { params.oktoberfest_image }
 
+	publishDir "${params.outdir}/${searchengine}", mode: 'copy'
+
     input:
     path okt_features_tsv
+    val searchengine
 
     output:
     path "${okt_features_tsv.baseName}.oktoberfest.pin"

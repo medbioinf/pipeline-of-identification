@@ -93,6 +93,8 @@ process enhance_psms_and_create_pin {
     memory { params.enhance_psm_tsv_mem }
     container { params.python_image }
 
+	publishDir "${params.outdir}/${searchengine}", mode: 'copy'
+
     input:
     path psm_utils_tsv
     val searchengine

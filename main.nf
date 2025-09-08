@@ -178,11 +178,6 @@ workflow {
 }
 
 output {
-    'comet' {
-        enabled params.execute_comet
-        path 'comet'
-    }
-
     'maxquant' {
         enabled params.execute_maxquant
         path 'maxquant'

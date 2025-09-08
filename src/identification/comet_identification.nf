@@ -36,25 +36,15 @@ workflow comet_identification {
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
 
-    pout_files = psm_percolator(pin_files)
+    psm_percolator(pin_files, 'comet')
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.comet_psm_id_pattern, params.comet_spectrum_id_pattern, '^DECOY_', 'comet')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.comet_scan_id_pattern)
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.comet_spectrum_id_pattern, 'comet')
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.comet_scan_id_pattern, 'comet')
     
     // perform percolation
-    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)
-    oktoberfest_percolator_results = oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins)
-
-    publish:
-    comet_mzids >> 'comet'
-    psm_tsvs >> 'comet'
-    pin_files >> 'comet'
-    pout_files >> 'comet'
-    ms2rescore_pins >> 'comet'
-    ms2rescore_percolator_results >> 'comet'
-    oktoberfest_pins >> 'comet'
-    oktoberfest_percolator_results >> 'comet'
+    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'comet')
+    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'comet')
 }
 
 
@@ -98,6 +88,8 @@ process identification_with_comet {
     cpus { params.comet_threads }
     memory { params.comet_mem }
     container { params.comet_image }
+
+	publishDir "${params.outdir}/comet", mode: 'copy'
 
     input:
     path fasta

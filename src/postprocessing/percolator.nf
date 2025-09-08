@@ -14,9 +14,10 @@ params.percolator_mem = "4 GB"
 workflow psm_percolator {
     take:
     pin_files
+    searchengine
 
     main:
-    pout_files = run_percolator(pin_files)
+    pout_files = run_percolator(pin_files, searchengine)
 
     emit:
     pout_files
@@ -28,8 +29,11 @@ process run_percolator {
     memory { params.percolator_mem }
     container { params.percolator_image }
 
+	publishDir "${params.outdir}/${searchengine}", mode: 'copy'
+
     input:
     path pin_file
+    val searchengine
 
     output:
     path "${pin_file.baseName}.pout"
