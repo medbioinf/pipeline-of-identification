@@ -53,7 +53,7 @@ workflow msgfplus_identification {
 
     fasta_idx_mzml_chunk_combo = fasta_index.combine(mzmls_to_chunks)
 
-    msgfplus_results = identification_with_msgfplus(msgfplus_params_file, fasta_idx_mzml_chunk_combo, precursor_tol_ppm)
+    msgfplus_results = identification_with_msgfplus(msgfplus_params_file, fasta_idx_mzml_chunk_combo, precursor_tol_ppm, (params.msgfplus_split_fasta == 0))
 
     if ((params.msgfplus_split_fasta > 0)) {
         grouped_results = msgfplus_results.map { it ->
@@ -89,25 +89,15 @@ workflow msgfplus_identification {
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
 
-    pout_files = psm_percolator(pin_files)
+    psm_percolator(pin_files, 'msgfplus')
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msgfplus_psm_id_pattern, params.msgfplus_spectrum_id_pattern, '^DECOY_', 'msgfplus')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msgfplus_scan_id_pattern)
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msgfplus_spectrum_id_pattern, 'msgfplus')
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msgfplus_scan_id_pattern, 'msgfplus')
 
     // perform percolation
-    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)
-    oktoberfest_percolator_results = oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins)
-
-    publish:
-    fasta_merged_results.map{ it -> it[1] } >> 'msgfplus'
-    psm_tsvs >> 'msgfplus'
-    pin_files >> 'msgfplus'
-    pout_files >> 'msgfplus'
-    ms2rescore_pins >> 'msgfplus'
-    ms2rescore_percolator_results >> 'msgfplus'
-    oktoberfest_pins >> 'msgfplus'
-    oktoberfest_percolator_results >> 'msgfplus'
+    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'msgfplus')
+    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'msgfplus')
 }
 
 process identification_with_msgfplus {
@@ -115,10 +105,13 @@ process identification_with_msgfplus {
     memory { params.msgfplus_mem_gb + " GB" }
     container { params.msgfplus_image }
 
+    publishDir "${params.outdir}/msgfplus", mode: 'copy', enabled: publish_results
+
     input:
     path msgfplus_params_file
     tuple path(fasta), path(canno), path(cnlcp), path(csarr), path(cseq), val(original_mzml_basename), path(mzml)
     val precursor_tol_ppm
+    val publish_results
 
     output:
     tuple val(original_mzml_basename), path("${mzml.baseName}*.mzid")
@@ -198,6 +191,8 @@ process mzid_merger {
     cpus 2
     memory "8 GB"
     container { params.mzidmerger_image }
+
+    publishDir "${params.outdir}/msgfplus", mode: 'copy'
 
     input:
     tuple val(original_mzml_basename), val(mzml_split), path(mzid_files)
