@@ -35,37 +35,21 @@ workflow sage_identification {
 
     // all mzMLs are processed at once in sage for now -> much faster
     sage_results = identification_with_sage(sage_config_file, fasta, mzmls.collect())
-    separated_results = separate_sage_results(sage_results.sage_pin, sage_results.sage_tsv)
+    separated_results = separate_sage_results(sage_results.sage_tsv)
 
-    // transpose to tuples containing [pin, tsv] files for each mzML 
-    return_files = separated_results.sage_pin.collect()
-        .concat(separated_results.sage_tsv.collect())
-        .toList()
-        .transpose()
-    
     psm_tsvs_and_pin = convert_and_enhance_psm_tsv(separated_results.sage_tsv.flatten(), 'sage_tsv', 'sage')
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
 
-    pout_files = psm_percolator(pin_files)
+    psm_percolator(pin_files, 'sage')
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.sage')) ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.sage_psm_id_pattern, params.sage_spectrum_id_pattern, '^DECOY_', 'sage')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.sage_scan_id_pattern)
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.sage_spectrum_id_pattern, 'sage')
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.sage_scan_id_pattern, 'sage')
 
     // perform percolation
-    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)
-    oktoberfest_percolator_results = oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins)
-
-    publish:
-    return_files >> 'sage'
-    psm_tsvs >> 'sage'
-    pin_files >> 'sage'
-    pout_files >> 'sage'
-    ms2rescore_pins >> 'sage'
-    ms2rescore_percolator_results >> 'sage'
-    oktoberfest_pins >> 'sage'
-    oktoberfest_percolator_results >> 'sage'
+    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'sage')
+    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'sage')
 }
 
 
@@ -119,7 +103,6 @@ process identification_with_sage {
     path mzmls
 
     output:
-    path "results.sage.pin", emit: sage_pin
     path "results.sage.tsv", emit: sage_tsv
 
     script:
@@ -134,23 +117,16 @@ process separate_sage_results {
     memory "1 GB"
     container { params.python_image }
 
+    publishDir "${params.outdir}/sage", mode: 'copy'
+
     input:
-    path sage_pin
     path sage_tsv
 
     output:
-    path "*.sage.pin", emit: sage_pin
     path "*.sage.tsv", emit: sage_tsv
 
     script:
     """
-    # process the pin file and create one file for each input file
-    for filename in \$(awk 'NR>1{a[\$6]++} END{for(b in a) print b}' ${sage_pin});
-    do
-        head -n1 ${sage_pin} > \${filename}.sage.pin
-        awk -v f1="\${filename}" '\$6==f1' ${sage_pin} >> \${filename}.sage.pin
-    done
-
     # process the tsv file and create one file for each input file
     for filename in \$(awk 'NR>1{a[\$5]++} END{for(b in a) print b}' ${sage_tsv});
     do
