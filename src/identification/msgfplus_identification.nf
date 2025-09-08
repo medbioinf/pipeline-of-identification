@@ -105,7 +105,7 @@ process identification_with_msgfplus {
     memory { params.msgfplus_mem_gb + " GB" }
     container { params.msgfplus_image }
 
-    publishDir "${params.outdir}/msgfplus", mode: 'copy', enabled: publish_results
+    publishDir "${params.outdir}/msgfplus", mode: 'copy', enabled: { publish_results }
 
     input:
     path msgfplus_params_file
