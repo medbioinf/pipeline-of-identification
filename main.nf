@@ -86,7 +86,11 @@ workflow {
     }
 
     if (params.raw_files) {
-        raw_files = Channel.fromPath(params.raw_files).flatten()
+        if (params.is_timstof) {
+            raw_files = Channel.fromPath(params.raw_files, type: 'dir').flatten()
+        } else {
+            raw_files = Channel.fromPath(params.raw_files).flatten()
+        }
         raw_files_info = raw_files
     } else {
         raw_files_info = "no raw spectra given"
