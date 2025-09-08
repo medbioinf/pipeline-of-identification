@@ -37,25 +37,15 @@ workflow xtandem_identification {
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
 
-    pout_files = psm_percolator(pin_files)
+    psm_percolator(pin_files, 'xtandem')
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.xtandem_identification')) + '.mzML'  ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.xtandem_psm_id_pattern, params.xtandem_spectrum_id_pattern, '^DECOY_', 'xtandem')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.xtandem_scan_id_pattern)
-    
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.xtandem_spectrum_id_pattern, 'xtandem')
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.xtandem_scan_id_pattern, 'xtandem')
+
     // perform percolation
-    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)
-    oktoberfest_percolator_results = oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins)
-    
-    publish:
-    tandem_xmls >> 'xtandem'
-    psm_tsvs >> 'xtandem'
-    pin_files >> 'xtandem'
-    pout_files >> 'xtandem'
-    ms2rescore_pins >> 'xtandem'
-    ms2rescore_percolator_results >> 'xtandem'
-    oktoberfest_pins >> 'xtandem'
-    oktoberfest_percolator_results >> 'xtandem'
+    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'xtandem')
+    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'xtandem')
 }
 
 /**
@@ -127,6 +117,8 @@ process identification_with_xtandem {
     cpus { params.xtandem_threads }
     memory { params.xtandem_mem }
     container { params.xtandem_image }
+    
+    publishDir "${params.outdir}/xtandem", mode: 'copy'
 
     input:
     path xtandem_param_file

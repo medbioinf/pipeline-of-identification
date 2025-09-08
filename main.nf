@@ -176,35 +176,3 @@ workflow {
         xtandem_identification(xtandem_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
     }
 }
-
-output {
-    'maxquant' {
-        enabled params.execute_maxquant
-        path 'maxquant'
-    }
-
-    'msamanda' {
-        enabled params.execute_msamanda
-        path 'msamanda'
-    }
-
-    'msfragger' {
-        enabled params.execute_msfragger
-        path 'msfragger'
-    }
-
-    'msgfplus' {
-        enabled params.execute_msgfplus
-        path 'msgfplus'
-    }
-
-    'sage' {
-        enabled params.execute_sage
-        path 'sage'
-    }
-
-    'xtandem' {
-        enabled params.execute_xtandem
-        path 'xtandem'
-    }
-}
