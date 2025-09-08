@@ -24,13 +24,14 @@ workflow maxquant_identification {
     take:
     maxquant_params_file
     fasta
+    raw_files
     mzmls
     precursor_tol_ppm
 
     main:
     // for TimsTOF data, always process the .d path instead of the mzML files
     if (params.is_timstof) {
-        process_files = Channel.fromPath(params.raw_files).flatten()
+        process_files = raw_files
     } else {
         process_files = mzmls
     }

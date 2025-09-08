@@ -148,7 +148,7 @@ workflow {
 
     if (params.execute_maxquant) {
         maxquant_params_file = Channel.fromPath(params.maxquant_params_file).first()
-        maxquant_identification(maxquant_params_file, fasta_target, mzmls, params.precursor_tol_ppm)
+        maxquant_identification(maxquant_params_file, fasta_target, raw_files, mzmls, params.precursor_tol_ppm)
     }
 
     if (params.execute_msamanda) {
