@@ -1,7 +1,8 @@
 nextflow.enable.dsl=2
 
 // parameters for oktoberfest
-params.oktoberfest_memory = "64 GB"
+params.oktoberfest_memory = "64.GB"
+params.oktoberfest_to_pin_memory = "4.GB"
 params.oktoberfest_intensity_model = "Prosit_2020_intensity_HCD"
 params.oktoberfest_irt_model = "Prosit_2019_irt"
 params.oktoberfest_forks = 1 // have some mercy with the koina servers
@@ -85,7 +86,7 @@ process run_oktoberfest_feature_gen {
  */
 process oktoberfest_features_to_pin {
     cpus 1
-    memory { params.oktoberfest_memory }
+    memory { params.oktoberfest_to_pin_memory }
 
     container { params.oktoberfest_image }
 
