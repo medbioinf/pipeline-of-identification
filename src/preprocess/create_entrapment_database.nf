@@ -2,6 +2,8 @@ nextflow.enable.dsl=2
 
 params.fdrbench_image = 'quay.io/medbioinf/fdrbench-nightly:146f77'
 
+params.fdrbench_mem_gb = 16
+
 
 /**
  * Adds decoys and/or entapments to the FASTA file.
@@ -16,7 +18,7 @@ workflow create_entrapment_database {
         fold
 
     main:
-        entrapment_fasta = call_entrapment_database(fasta, fold)
+        entrapment_fasta = call_entrapment_database(fasta, fold, params.fdrbench_mem_gb)
         
     emit:
         entrapment_fasta
@@ -34,18 +36,21 @@ workflow create_entrapment_database {
  */
 process call_entrapment_database {
     cpus 1
+    memory "${ memory_limit }.GB"
+
     container { params.fdrbench_image }
 
     input: 
     path fasta
     val fold
+    val memory_limit
 
     output:
     path "${fasta.baseName}-entrapment.fasta"
 
     script:
     """
-    java -jar /opt/fdrbench/fdrbench.jar -db ${fasta} -o ${fasta.baseName}-entrapment.fasta -fold ${fold} -level protein -entrapment_label ENTRAPMENT_ -entrapment_pos 0 -uniprot -check
+    java -Xmx${memory_limit}G -jar /opt/fdrbench/fdrbench.jar -db ${fasta} -o ${fasta.baseName}-entrapment.fasta -fold ${fold} -level protein -entrapment_label ENTRAPMENT_ -entrapment_pos 0 -uniprot -check
     # 'Reheader' to add entrapment index to database and accession part of the header
     sed -r -i "s;^>ENTRAPMENT_(.+)\\|(.+)\\|(.+)_([0-9]+)\$;>ENTRAPMENT_\\4_\\1|ENTRAPMENT_\\4_\\2|\\3_\\4;g" ${fasta.baseName}-entrapment.fasta
     """
