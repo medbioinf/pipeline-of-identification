@@ -1,12 +1,3 @@
-nextflow.enable.dsl=2
-
-// parameters for ms2rescore
-params.ms2rescore_threads = 4
-params.ms2rescore_mem = "64 GB"
-params.ms2rescore_model = "HCD"
-params.ms2rescore_chunk_size = 100000
-params.ms2pip_model_dir = "./ms2pip-model"
-
 workflow ms2rescore_workflow {
     take:
     psm_tsvs_and_mzmls

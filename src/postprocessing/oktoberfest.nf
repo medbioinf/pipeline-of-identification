@@ -1,12 +1,3 @@
-nextflow.enable.dsl=2
-
-// parameters for oktoberfest
-params.oktoberfest_memory = "64.GB"
-params.oktoberfest_to_pin_memory = "4.GB"
-params.oktoberfest_intensity_model = "Prosit_2020_intensity_HCD"
-params.oktoberfest_irt_model = "Prosit_2019_irt"
-params.oktoberfest_forks = 1 // have some mercy with the koina servers
-
 /**
  * Runs oktoberfest rescoring for the given PSMs and mzML files.
  * 

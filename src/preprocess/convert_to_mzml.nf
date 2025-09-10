@@ -1,5 +1,3 @@
-params.tdf2mzml_threads = 8
-
 workflow convert_to_mzml {
     take:
     input_path

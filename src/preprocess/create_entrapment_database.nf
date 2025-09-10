@@ -1,5 +1,3 @@
-params.fdrbench_mem_gb = 16
-
 /**
  * Adds decoys and/or entapments to the FASTA file.
  *

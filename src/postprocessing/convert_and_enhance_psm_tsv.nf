@@ -1,8 +1,3 @@
-nextflow.enable.dsl=2
-
-params.convert_psm_tsv_mem = "60 GB"
-params.enhance_psm_tsv_mem = "8 GB"
-
 /**
  * Executes postprocessing steps to enhance the psm_utils TSV and prepare the PIN files
  *

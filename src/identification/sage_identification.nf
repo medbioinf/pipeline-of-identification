@@ -1,13 +1,3 @@
-// number of threads used by sage
-params.sage_threads = 16
-params.sage_mem = "128 GB"
-params.sage_prefilter = "false"
-params.sage_prefilter_chunk_size = 0
-
-params.sage_psm_id_pattern = "(.*)"
-params.sage_spectrum_id_pattern = '(.*)'
-params.sage_scan_id_pattern = '.*scan=(?P<scan_id>\\d+)$'
-
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
 include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'

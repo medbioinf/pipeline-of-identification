@@ -1,7 +1,3 @@
-// number of threads used by maxquant
-params.decoy_database_threads = 4
-
-
 /**
  * Creates a concatenated target-decoy database
  *

@@ -1,7 +1,3 @@
-// number of threads used by percolator
-params.percolator_threads = 4
-params.percolator_mem = "4 GB"
-
 /**
  * Executes percolator for the given PIN files
  *
