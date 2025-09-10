@@ -78,16 +78,6 @@
           "default": true,
           "description": "Use only top identifications for any post processing. Otherwise, all identifications will be used."
         },
-        "execute_maxquant": {
-          "type": "boolean",
-          "default": true,
-          "description": "Whether to execute identification with MaxQuant"
-        },
-        "maxquant_params_file": {
-          "type": "string",
-          "default": "${projectDir}/config/mqpar.xml",
-          "description": "Path to the MaxQuant params file for additional, search engine specific settings."
-        },
         "execute_msamanda": {
           "type": "boolean",
           "default": true,
@@ -179,7 +169,47 @@
         "comet_scan_id_pattern": {
           "type": "string",
           "default": "^(?P<scan_id>\\\\d+)$",
-          "description": "Regular expression to parse the PSM ID from Comet for Oktoberfest"
+          "description": "Regular expression to parse the PSM ID for Oktoberfest"
+        }
+      }
+    },
+    "maxquant_parameters": {
+      "title": "MaxQuant parameters",
+      "type": "object",
+      "description": "",
+      "default": "",
+      "properties": {
+        "execute_maxquant": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute identification with MaxQuant"
+        },
+        "maxquant_params_file": {
+          "type": "string",
+          "default": "${projectDir}/config/mqpar.xml",
+          "description": "Path to the MaxQuant params file for additional, search engine specific settings."
+        },
+        "maxquant_threads": {
+          "type": "integer",
+          "default": 4,
+          "description": "Number of allowed threads / CPUs for MaxQuant"
+        },
+        "maxquant_mem": {
+          "type": "string",
+          "default": "32.GB",
+          "description": "Number of allowed memory for MaxQuant"
+        },
+        "maxquant_psm_id_pattern": {
+          "type": "string",
+          "description": "Regular expression to parse the PSM ID for MS2Rescore"
+        },
+        "maxquant_spectrum_id_pattern": {
+          "type": "string",
+          "description": "Regular expression to parse the spectrum ID which is matched against the PSM ID for MS2Rescore"
+        },
+        "maxquant_scan_id_pattern": {
+          "type": "string",
+          "description": "Regular expression to parse the PSM ID for Oktoberfest"
         }
       }
     }
@@ -193,6 +223,9 @@
     },
     {
       "$ref": "#/$defs/comet_parameters"
+    },
+    {
+      "$ref": "#/$defs/maxquant_parameters"
     }
   ]
 }

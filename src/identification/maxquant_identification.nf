@@ -1,11 +1,3 @@
-// number of threads used by maxquant
-params.maxquant_threads = 4
-params.maxquant_mem = "32 GB"
-
-params.maxquant_psm_id_pattern = ""
-params.maxquant_spectrum_id_pattern = ""
-params.maxquant_scan_id_pattern = ""
-
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
 include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
