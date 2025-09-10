@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/mpc-bioinformatics/McQuaC//nextflow_schema.json",
+  "title": "mpc-bioinformatics/McQuaC pipeline parameters",
+  "description": "A pipeline for the identification of peptides from mass spectrometry data, integrating multiple search engines and post-processing tools.",
+  "type": "object",
+  "$defs": {
+    "input_output_options": {
+      "title": "Input/output options",
+      "type": "object",
+      "fa_icon": "fas fa-terminal",
+      "description": "Define where the pipeline should find input data and save output data.",
+      "required": ["outdir", "raw_files"],
+      "properties": {
+        "outdir": {
+          "type": "string",
+          "format": "directory-path",
+          "description": "The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure.",
+          "fa_icon": "fas fa-folder-open",
+          "default": "./"
+        },
+        "raw_files": {
+          "type": "string",
+          "description": "Path to the raw spectra files (either .raw or .d), can contain * to process multiple files",
+          "default": "./msms-files/*.raw"
+        },
+        "mzml_files": {
+          "type": "string",
+          "description": "If you already have conversions to mzML, specify them here. They need to have the same name basis as the raw spectrum files"
+        },
+        "fasta": {
+          "type": "string",
+          "description": "Path to the protein FASTA file to use, in UniProt header format.",
+          "format": "file-path",
+          "mimetype": "text/fasta",
+          "exists": true
+        },
+        "fasta_target_decoy": {
+          "type": "string",
+          "description": "If you already have a target-decoy protein FASTA from a previous run, it can be given here.",
+          "format": "file-path",
+          "mimetype": "text/fasta"
+        },
+        "entrapment_fold": {
+          "type": "integer",
+          "default": 0,
+          "description": "This parameter specifies for an entrapment search the fold of entrapment proteins per target protein. No database will be created if 0."
+        },
+        "keep_mzmls": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the converted mzML files should be kept in the results folder."
+        }
+      }
+    },
+    "general_search_parameters": {
+      "title": "General search parameters",
+      "type": "object",
+      "description": "",
+      "default": "",
+      "properties": {
+        "precursor_tol_ppm": {
+          "type": "integer",
+          "default": 10,
+          "description": "The precursor tolerance in PPM"
+        },
+        "fragment_tol_da": {
+          "type": "number",
+          "default": 0.02,
+          "description": "The fragment tolerance in Dalton"
+        },
+        "is_timstof": {
+          "type": "boolean",
+          "description": "Specify whether the data is timsTOF data"
+        },
+        "use_only_rank1_psms": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use only top identifications for any post processing. Otherwise, all identifications will be used."
+        },
+        "execute_maxquant": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute identification with MaxQuant"
+        },
+        "maxquant_params_file": {
+          "type": "string",
+          "default": "${projectDir}/config/mqpar.xml",
+          "description": "Path to the MaxQuant params file for additional, search engine specific settings."
+        },
+        "execute_msamanda": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute identification with MSAmanda"
+        },
+        "msamanda_config_file": {
+          "type": "string",
+          "default": "${projectDir}/config/msamanda_settings.xml",
+          "description": "Path to the MSAmanda params file for additional, search engine specific settings."
+        },
+        "execute_msfragger": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute identification with MS Fragger"
+        },
+        "msfragger_config_file": {
+          "type": "string",
+          "default": "${projectDir}/config/closed_fragger.params",
+          "description": "Path to the MS Fragger params file for additional, search engine specific settings."
+        },
+        "execute_msgfplus": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute identification with MS-GF+"
+        },
+        "msgfplus_params_file": {
+          "type": "string",
+          "default": "${projectDir}/config/MSGFPlus_Params.txt",
+          "description": "Path to the MS-GF+ params file for additional, search engine specific settings."
+        },
+        "execute_sage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute identification with Sage"
+        },
+        "sage_config_file": {
+          "type": "string",
+          "default": "${projectDir}/config/sage_config.json",
+          "description": "Path to the Sage params file for additional, search engine specific settings."
+        },
+        "execute_xtandem": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute identification with X!Tandem"
+        },
+        "xtandem_config_file": {
+          "type": "string",
+          "default": "/mnt/data/projects/pipeline-of-identification/config/xtandem_input.xml",
+          "description": "Path to the X!Tandem params file for additional, search engine specific settings."
+        }
+      }
+    },
+    "comet_parameters": {
+      "title": "Comet parameters",
+      "type": "object",
+      "description": "",
+      "default": "",
+      "properties": {
+        "execute_comet": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute identification with Comet"
+        },
+        "comet_params_file": {
+          "type": "string",
+          "default": "${projectDir}/config/comet.params",
+          "description": "Path to the Comet params file for additional, search engine specific settings."
+        },
+        "comet_threads": {
+          "type": "integer",
+          "default": 16,
+          "description": "Number of allowed threads / CPUs for Comet"
+        },
+        "comet_mem": {
+          "type": "string",
+          "default": "8.GB",
+          "description": "Number of allowed memory for Comet"
+        },
+        "comet_psm_id_pattern": {
+          "type": "string",
+          "default": "(.*)",
+          "description": "Regular expression to parse the PSM ID for MS2Rescore"
+        },
+        "comet_spectrum_id_pattern": {
+          "type": "string",
+          "default": ".*scan=(\\\\d+)$",
+          "description": "Regular expression to parse the spectrum ID which is matched against the PSM ID for MS2Rescore"
+        },
+        "comet_scan_id_pattern": {
+          "type": "string",
+          "default": "^(?P<scan_id>\\\\d+)$",
+          "description": "Regular expression to parse the PSM ID from Comet for Oktoberfest"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "#/$defs/input_output_options"
+    },
+    {
+      "$ref": "#/$defs/general_search_parameters"
+    },
+    {
+      "$ref": "#/$defs/comet_parameters"
+    }
+  ]
+}
