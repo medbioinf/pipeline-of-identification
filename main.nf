@@ -1,6 +1,6 @@
-nextflow.enable.dsl=2
-
-nextflow.preview.output = true
+//
+// Nextflow pipeline for peptide identification with multiple search engines and post-processing tools
+//
 
 // default python image
 params.python_image = 'ghcr.io/medbioinf/pipeline-of-identification:latest'
@@ -30,6 +30,7 @@ params.execute_sage = true
 params.execute_xtandem = true
 
 // default parameter files
+params.outdir = './'
 params.comet_params_file = "${baseDir}/config/comet.params"
 params.maxquant_params_file = "${baseDir}/config/mqpar.xml"
 params.msamanda_config_file = "${baseDir}/config/msamanda_settings.xml"
@@ -86,7 +87,11 @@ workflow {
     }
 
     if (params.raw_files) {
-        raw_files = Channel.fromPath(params.raw_files).flatten()
+        if (params.is_timstof) {
+            raw_files = Channel.fromPath(params.raw_files, type: 'dir').flatten()
+        } else {
+            raw_files = Channel.fromPath(params.raw_files).flatten()
+        }
         raw_files_info = raw_files
     } else {
         raw_files_info = "no raw spectra given"
@@ -143,7 +148,7 @@ workflow {
 
     if (params.execute_maxquant) {
         maxquant_params_file = Channel.fromPath(params.maxquant_params_file).first()
-        maxquant_identification(maxquant_params_file, fasta_target, mzmls, params.precursor_tol_ppm)
+        maxquant_identification(maxquant_params_file, fasta_target, raw_files, mzmls, params.precursor_tol_ppm)
     }
 
     if (params.execute_msamanda) {
@@ -169,47 +174,5 @@ workflow {
     if (params.execute_xtandem) {
         xtandem_config_file = Channel.fromPath(params.xtandem_config_file).first()
         xtandem_identification(xtandem_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
-    }
-}
-
-output {
-    'mzmls' {
-        enabled params.keep_mzmls
-        path 'mzmls'
-    }
-
-    'comet' {
-        enabled params.execute_comet
-        path 'comet'
-    }
-
-    'maxquant' {
-        enabled params.execute_maxquant
-        path 'maxquant'
-    }
-
-    'msamanda' {
-        enabled params.execute_msamanda
-        path 'msamanda'
-    }
-
-    'msfragger' {
-        enabled params.execute_msfragger
-        path 'msfragger'
-    }
-
-    'msgfplus' {
-        enabled params.execute_msgfplus
-        path 'msgfplus'
-    }
-
-    'sage' {
-        enabled params.execute_sage
-        path 'sage'
-    }
-
-    'xtandem' {
-        enabled params.execute_xtandem
-        path 'xtandem'
     }
 }

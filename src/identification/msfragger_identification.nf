@@ -35,25 +35,15 @@ workflow msfragger_identification {
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
 
-    pout_files = psm_percolator(pin_files)
+    psm_percolator(pin_files, 'msfragger')
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.pepXML')) + '.mzML'  ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msfragger_psm_id_pattern, params.msfragger_spectrum_id_pattern, '^DECOY_', 'msfragger')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msfragger_scan_id_pattern)
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msfragger_spectrum_id_pattern, 'msfragger')
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msfragger_scan_id_pattern, 'msfragger')
     
     // perform percolation
-    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)
-    oktoberfest_percolator_results = oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins)
-
-    publish:
-    fragger_results_pepxml >> 'msfragger'
-    psm_tsvs >> 'msfragger'
-    pin_files >> 'msfragger'
-    pout_files >> 'msfragger'
-    ms2rescore_pins >> 'msfragger'
-    ms2rescore_percolator_results >> 'msfragger'
-    oktoberfest_pins >> 'msfragger'
-    oktoberfest_percolator_results >> 'msfragger'
+    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'msfragger')
+    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'msfragger')
 }
 
 
@@ -100,6 +90,8 @@ process identification_with_msfragger {
     cpus { params.msfragger_threads }
     memory { params.msfragger_mem_gb + " GB" }
     container { params.msfragger_image }
+    
+    publishDir "${params.outdir}/msfragger", mode: 'copy'
 
     input:
     path fasta

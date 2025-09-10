@@ -18,15 +18,14 @@ workflow convert_to_mzml {
         
     emit:
     mzml
-
-    publish:
-    mzml >> 'mzmls'
 }
 
 process convert_thermo_raw {
     cpus 2
     memory "8 GB"
     container { params.msconvert_image }
+
+	publishDir "${params.outdir}/mzmls", mode: 'copy', enabled: params.keep_mzmls
 
     input:
     path input_raw
@@ -65,6 +64,8 @@ process adjust_mzML {
     cpus 2
     memory "8 GB"
     container { params.msconvert_image }
+
+	publishDir "${params.outdir}/mzmls", mode: 'copy', enabled: params.keep_mzmls
 
     input:
     path input_mzML

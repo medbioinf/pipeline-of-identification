@@ -24,13 +24,14 @@ workflow maxquant_identification {
     take:
     maxquant_params_file
     fasta
+    raw_files
     mzmls
     precursor_tol_ppm
 
     main:
     // for TimsTOF data, always process the .d path instead of the mzML files
     if (params.is_timstof) {
-        process_files = Channel.fromPath(params.raw_files).flatten()
+        process_files = raw_files
     } else {
         process_files = mzmls
     }
@@ -41,7 +42,7 @@ workflow maxquant_identification {
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
 
-    pout_files = psm_percolator(pin_files)
+    psm_percolator(pin_files, 'maxquant')
 
     if (params.maxquant_psm_id_pattern) {
         psm_id_pattern = params.maxquant_psm_id_pattern
@@ -75,22 +76,12 @@ workflow maxquant_identification {
         psm_tsvs_and_spectra_oktoberfest = psm_tsvs_and_spectrafiles
     }
 
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_spectrafiles, psm_tsvs.collect(), process_files.collect(), psm_id_pattern, spectrum_id_pattern, '', 'maxquant')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_spectra_oktoberfest, psm_tsvs.collect(), mzmls.collect(), scan_id_pattern)
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_spectrafiles, psm_tsvs.collect(), process_files.collect(), spectrum_id_pattern, 'maxquant')
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_spectra_oktoberfest, psm_tsvs.collect(), mzmls.collect(), scan_id_pattern, 'maxquant')
     
     // perform percolation
-    ms2rescore_percolator_results = ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins)
-    oktoberfest_percolator_results = oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins)
-
-    publish:
-    maxquant_results >> 'maxquant'
-    psm_tsvs >> 'maxquant'
-    pin_files >> 'maxquant'
-    pout_files >> 'maxquant'
-    ms2rescore_pins >> 'maxquant'
-    ms2rescore_percolator_results >> 'maxquant'
-    oktoberfest_pins >> 'maxquant'
-    oktoberfest_percolator_results >> 'maxquant'
+    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'maxquant')
+    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'maxquant')
 }
 
 
@@ -99,8 +90,10 @@ process identification_with_maxquant {
     memory { params.maxquant_mem }
     container { params.maxquant_image }
 
+    publishDir "${params.outdir}/maxquant", mode: 'copy'
+
     stageInMode 'copy'  // MaxQuant respectively Mono does not support symlinks
-    
+
     input:
     path maxquant_params_file
     path fasta

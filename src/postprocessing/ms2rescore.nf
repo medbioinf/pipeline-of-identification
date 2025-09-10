@@ -11,14 +11,12 @@ workflow ms2rescore_workflow {
     psm_tsvs_and_mzmls
     psm_tsvs
     mzmls
-    psm_id_pattern
     spectrum_id_pattern
-    id_decoy_pattern
     searchengine
 
     main:
     ms2rescore_pre_pins = run_chunked_ms2rescore(psm_tsvs_and_mzmls, psm_tsvs, mzmls, spectrum_id_pattern, params.fragment_tol_da)
-    ms2rescore_pins = correct_psm_utils_pins(ms2rescore_pre_pins)
+    ms2rescore_pins = correct_psm_utils_pins(ms2rescore_pre_pins, searchengine)
 
     emit:
     ms2rescore_pins
@@ -62,8 +60,11 @@ process correct_psm_utils_pins {
 
     container { params.python_image }
 
+	publishDir "${params.outdir}/${searchengine}", mode: 'copy'
+
     input:
     path psm_utils_pins
+    val searchengine
 
     output:
     path "${psm_utils_pins.baseName}.corrected.pin"
