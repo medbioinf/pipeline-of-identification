@@ -85,7 +85,7 @@ process correct_psm_utils_pins {
 process check_or_download_model {
     cpus 1
     memory '2 GB'
-    maxForks 1
+    maxForks 1  // this makes sure that the download is only performed once, not more in parallel
 
     container { params.python_image }
 
