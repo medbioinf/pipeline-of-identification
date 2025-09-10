@@ -1,7 +1,3 @@
-nextflow.enable.dsl=2
-
-params.msamanda_image = 'quay.io/medbioinf/msamanda:3.0.22.071'
-
 // number of threads used by msamanda
 params.msamanda_threads = 16
 params.msamanda_mem = "64 GB"
@@ -56,7 +52,8 @@ workflow msamanda_identification {
 process identification_with_msamanda {
     cpus { params.msamanda_threads }
     memory { params.msamanda_mem }
-    container { params.msamanda_image }
+
+    label 'msamanda_image'
 
     publishDir "${params.outdir}/msamanda", mode: 'copy'
 

@@ -1,7 +1,3 @@
-nextflow.enable.dsl=2
-
-params.comet_image = 'quay.io/medbioinf/comet-ms:v2024.01.0'
-
 // number of threads used by comet
 params.comet_threads = 16
 params.comet_mem = "8 GB"
@@ -51,7 +47,8 @@ workflow comet_identification {
 process adjust_comet_param_file {
     cpus 2
     memory "1 GB"
-    container { params.python_image }
+
+    label 'python_image'
 
     input:
     path comet_params_file
@@ -87,7 +84,8 @@ process adjust_comet_param_file {
 process identification_with_comet {
     cpus { params.comet_threads }
     memory { params.comet_mem }
-    container { params.comet_image }
+
+    label 'comet_image'
 
 	publishDir "${params.outdir}/comet", mode: 'copy'
 

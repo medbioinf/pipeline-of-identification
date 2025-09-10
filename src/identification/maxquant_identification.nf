@@ -1,7 +1,3 @@
-nextflow.enable.dsl=2
-
-params.maxquant_image = 'quay.io/medbioinf/maxquant:2.6.3.0'
-
 // number of threads used by maxquant
 params.maxquant_threads = 4
 params.maxquant_mem = "32 GB"
@@ -88,7 +84,8 @@ workflow maxquant_identification {
 process identification_with_maxquant {
     cpus { params.maxquant_threads }
     memory { params.maxquant_mem }
-    container { params.maxquant_image }
+
+    label 'maxquant_image'
 
     publishDir "${params.outdir}/maxquant", mode: 'copy'
 

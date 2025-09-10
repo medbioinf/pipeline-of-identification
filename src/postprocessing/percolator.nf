@@ -1,7 +1,3 @@
-nextflow.enable.dsl=2
-
-params.percolator_image = 'ghcr.io/percolator/percolator:branch-3-08'
-
 // number of threads used by percolator
 params.percolator_threads = 4
 params.percolator_mem = "4 GB"
@@ -27,7 +23,8 @@ workflow psm_percolator {
 process run_percolator {
     cpus  { params.percolator_threads }
     memory { params.percolator_mem }
-    container { params.percolator_image }
+
+    label 'percolator_image'
 
 	publishDir "${params.outdir}/${searchengine}", mode: 'copy'
 

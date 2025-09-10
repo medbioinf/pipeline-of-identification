@@ -31,8 +31,7 @@ process run_chunked_ms2rescore {
     cpus  { params.ms2rescore_threads }
     memory { params.ms2rescore_mem }
 
-    container { params.python_image }
-    containerOptions { "-v /mnt/data/projects/pipeline-of-identification/bin/ms2pip-model:/mnt/data/ms2pip-model" }
+    label 'python_image'
 
     input:
     tuple val(psm_utils_tsvs), val(mzml_for_psms)
@@ -63,7 +62,7 @@ process correct_psm_utils_pins {
     cpus  2
     memory '8 GB'
 
-    container { params.python_image }
+    label 'python_image'
 
 	publishDir "${params.outdir}/${searchengine}", mode: 'copy'
 
@@ -87,7 +86,7 @@ process check_or_download_model {
     memory '2 GB'
     maxForks 1  // this makes sure that the download is only performed once, not more in parallel
 
-    container { params.python_image }
+    label 'python_image'
 
     input:
     path model_dir

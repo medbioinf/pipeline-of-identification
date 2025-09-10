@@ -1,9 +1,4 @@
-nextflow.enable.dsl=2
-
-params.fdrbench_image = 'quay.io/medbioinf/fdrbench-nightly:146f77'
-
 params.fdrbench_mem_gb = 16
-
 
 /**
  * Adds decoys and/or entapments to the FASTA file.
@@ -38,7 +33,7 @@ process call_entrapment_database {
     cpus 1
     memory "${ memory_limit }.GB"
 
-    container { params.fdrbench_image }
+    label 'fdrbench_image'
 
     input: 
     path fasta

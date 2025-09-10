@@ -48,7 +48,7 @@ process run_oktoberfest_feature_gen {
     maxForks params.oktoberfest_forks
     memory { params.oktoberfest_memory }
 
-    container { params.oktoberfest_image }
+    label 'oktoberfest_image'
 
     input:
     tuple val(psm_utils_tsvs), val(mzml_for_psms)
@@ -88,7 +88,7 @@ process oktoberfest_features_to_pin {
     cpus 1
     memory { params.oktoberfest_to_pin_memory }
 
-    container { params.oktoberfest_image }
+    label 'oktoberfest_image'
 
 	publishDir "${params.outdir}/${searchengine}", mode: 'copy'
 
